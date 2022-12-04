@@ -322,7 +322,7 @@ def read_train_data(debug=False):
             all_data.append((cam, img, mask))
             cam_centers.append(cam[2])
 
-            W, H = img.shape
+            W, H, _ = img.shape
             pix = pts2pix_ns(cam, pts)
             pix = pix.long()
  
