@@ -342,7 +342,7 @@ def read_train_data(debug=False):
 
             holes = (pix_dep > 2) & mask
             pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.clamp(0, 1).numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
-            pix_dep = torch.from_numpy(cv2.medianBlur(pix_dep.clamp(0, 1).numpy(), 5)).float()
+            pix_dep = torch.from_numpy(cv2.medianBlur(pix_dep.clamp(0, 1).numpy(), 9)).float()
 
             pix_dep[~mask] = 1
 
