@@ -380,8 +380,8 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
     return episodes
 
         
-def load_mvsnet(ckpt_file):
+def load_mvsnet(ckpt):
     mvsnet = MVSNet()
-    mvsnet.load_state_dict(torch.load(ckpt_file))
+    mvsnet.load_state_dict(ckpt)
     mvsnet = mvsnet.cuda()
     return mvsnet
