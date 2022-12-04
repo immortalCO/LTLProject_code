@@ -289,4 +289,4 @@ def read_train_data():
         train_config = json.load(open(f"{DATASET}/transforms_train.json"))
         valid_config = json.load(open(f"{DATASET}/transforms_test.json"))
 
-        print("233")
+        
