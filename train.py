@@ -299,7 +299,7 @@ def read_data_ns(DATASET, config, i, debug=False):
     img = img * opa.unsqueeze(-1) + torch.tensor(BG_COLOR) * (1 - opa.unsqueeze(-1))
     return cam, img, opa > opa_thres
 
-def read_train_data(debug=False):
+def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
     for SCENE in TRAIN_SCENES:
         DATASET = f"{SCENES_DIR}/{SCENE}/"
