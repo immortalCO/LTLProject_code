@@ -285,6 +285,8 @@ def read_train_data():
         test_views = pairs[f"{SCENE}_test"]
         
         logging.info(f"Read #{SCENE} train_views = {train_views} test_views = {test_views}")    
-        
+
         train_config = json.load(open(f"{DATASET}/transforms_train.json"))
         valid_config = json.load(open(f"{DATASET}/transforms_test.json"))
+
+        print("233")
