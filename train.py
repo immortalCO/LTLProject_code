@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy
 import logging
+from tqdm import tqdm
 
 SCENES_DIR = "./datasets/NerfSyn/"
 TRAIN_SCENES = ["chair", "ficus", "materials"]
@@ -290,7 +291,7 @@ def read_train_data():
 
         cam_centers = []
 
-        for i in range(len(train_config['frames'])):
+        for i in tqdm(range(len(train_config['frames']))):
             cam, img = read_data_ns(DATASET, train_config, i)
             cam_centers.append(cam[2])
 
