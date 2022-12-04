@@ -339,12 +339,12 @@ def read_train_data(debug=False):
 
             pix_dep = pix_dep.reshape(W, H)
             
-            if i <= 5:
+            if i <= 10:
                 print(pix_dep.aminmax())
-                show(img)
-                show(mask)
-                show(1-pix_dep)
-                return
+                # show(img)
+                show(1 - pix_dep)
+                if i == 10:
+                    return
                 
 
         
