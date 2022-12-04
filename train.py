@@ -303,7 +303,7 @@ def read_data_ns(DATASET, config, i, debug=False):
 
     # cam_int = torch.tensor([[focal, 0, 512 / 2], [0, focal, 640 / 2], [0, 0, 1]], dtype=torch.double)
     cam_int[:2] = cam_int[:2] / 4
-    cam_int = torch.tensor([512 / IMG_W, 640 / IMG_H]).float().diag() @ cam_int
+    cam_int = torch.tensor([512 / IMG_W, 640 / IMG_H, 1]).float().diag() @ cam_int
     proj = torch.eye(4, dtype=torch.double)
     proj[:3, :4] = cam_int @ cam_ext[:3, :4]
 
