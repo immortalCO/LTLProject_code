@@ -11,8 +11,8 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 import cv2
 
 SCENES_DIR = "./datasets/NerfSyn/"
-TRAIN_SCENES = ["chair", "ficus", "materials"]
-TEST_SCENES = ["drums", "hotdog", "lego", "mic", "ship"]
+TRAIN_SCENES = ["hotdog", "chair", "ficus", "materials"]
+TEST_SCENES = ["drums", "lego", "mic", "ship"]
 
 DEFAULT_VIEW_DIR = [-1., -1., -1.]
 BG_COLOR = [1, 1, 1]
