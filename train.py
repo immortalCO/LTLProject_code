@@ -339,9 +339,8 @@ def read_train_data(debug=False):
                 pix_dep.scatter_reduce_(0, pix_ind, dep, reduce="amin")
 
             pix_dep = pix_dep.reshape(W, H)
-            pix_dep[~mask] = 1
 
-            holes = pix_dep > 2
+            holes = (pix_dep > 2) & mask
             pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
             
             if i <= 10:
