@@ -341,13 +341,13 @@ def read_train_data(debug=False):
             pix_dep = pix_dep.reshape(W, H)
             pix_dep[~mask] = 1
 
-            # holes = pix_dep > 2
-            # pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
+            holes = pix_dep > 2
+            pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
             
             if i <= 10:
                 print(pix_dep.aminmax())
                 # show(img)
-                show(mask)
+                show(holes)
                 show(1 - pix_dep.clamp(0, 1))
                 if i == 10:
                     return
