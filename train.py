@@ -365,7 +365,7 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
         
         cam_centers = torch.stack(cam_centers)
         train_cam_centers = cam_centers[train_views]
-        dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(16, dim=1, largest=False)
+        dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(4, dim=1, largest=False)
         
         if debug:
             for i in range(len(train_views)):
