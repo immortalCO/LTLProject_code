@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import scipy
 import logging
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 SCENES_DIR = "./datasets/NerfSyn/"
 TRAIN_SCENES = ["chair", "ficus", "materials"]
@@ -17,6 +18,8 @@ BG_COLOR = [1, 1, 1]
 
 IMG_W = 800
 IMG_H = 800
+DEP_L = 2
+DEP_R = 6
 
 import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 128
@@ -293,7 +296,7 @@ def read_data_ns(DATASET, config, i, debug=False):
     cam = (cam_mat, cam_mat_inv, cam_center)
 
     img = img * opa.unsqueeze(-1) + torch.tensor(BG_COLOR) * (1 - opa.unsqueeze(-1))
-    return cam, img
+    return cam, img, opa > opa_thres
 
 def read_train_data(debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
@@ -303,7 +306,11 @@ def read_train_data(debug=False):
         train_views = pairs[f"{SCENE}_train"]
         test_views = pairs[f"{SCENE}_test"]
         
-        logging.info(f"Read #{SCENE} train_views = {train_views} test_views = {test_views}")    
+        logging.info(f"Read #{SCENE} train_views = {train_views} test_views = {test_views}")  
+
+        pts = torch.load(f"{DATASET}/cloud_ref.pth")
+        plot(pts)
+        logging.info(f"cloud shape = {pts.shape}")
 
         train_config = json.load(open(f"{DATASET}/transforms_train.json"))
 
@@ -311,9 +318,32 @@ def read_train_data(debug=False):
         cam_centers = []
 
         for i in tqdm(range(len(train_config['frames']))):
-            cam, img = read_data_ns(DATASET, train_config, i)
-            all_data.append((cam, img))
+            cam, img, mask = read_data_ns(DATASET, train_config, i)
+            all_data.append((cam, img, mask))
             cam_centers.append(cam[2])
+
+            W, H = img.shape
+            pix = pts2pix_ns(cam, pts)
+            pix = pix.long()
+ 
+            mask = (pix[:, 0] >= 0) & (pix[:, 1] >= 0) & (pix[:, 0] < H) & (pix[:, 1] < W)
+            pix = pix[mask]
+
+            pix_ind = pix[:, 0] * W + pix[:, 1]
+            pts_proj = pix2pts_ns(cam, pix_ind)
+            dep = ((pts[mask] - pts_proj).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
+            pix_dep = torch.ones(W * H, dtype=torch.float)
+            
+            with logging_redirect_tqdm():
+                pix_dep.scatter_reduce_(0, pix_ind, dep, reduce="amin")
+
+            pix_dep = pix_dep.reshape(W, H)
+            
+            if i <= 5:
+                show(img)
+                show(pix_dep)
+                return
+                
 
         
         cam_centers = torch.stack(cam_centers)
@@ -329,9 +359,6 @@ def read_train_data(debug=False):
                 rgb[train_pairs[i][1:], 2] = 1
                 plot(cam_centers, rgb=rgb, marker='o', size=50)
 
-        cloud = torch.load(f"{DATASET}/cloud_ref.pth")
-        print(cloud)
-        plot(cloud)
 
         break
 
