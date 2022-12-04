@@ -189,7 +189,7 @@ def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None, m
     import numpy as np
 
     if rgb is None:
-        rgb = contour_rgb(pts.cuda()).to(pts.device)
+        rgb = contour_rgb(pts.cuda()).to(pts.device).to(pts.dtype)
 
     if len(pts.shape) > 2:
         pts = pts.squeeze(0)
