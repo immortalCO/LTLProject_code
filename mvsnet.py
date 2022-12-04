@@ -104,14 +104,16 @@ class MVSNet(nn.Module):
 
         # step 1. feature extraction
         # in: images; out: 32-channel feature maps
-        logging.debug("step 1. feature extraction")
+        # logging.debug("step 1. feature extraction")
         if features is None:
             features = [self.feature(img) for img in imgs]
+
+        logging.debug(f"features: {features[0].shape} imgs: {imgs[0].shape}")
 
         
 
         # step 2. differentiable homograph, build cost volume
-        logging.debug("step 2. differentiable homograph, build cost volume")
+        # logging.debug("step 2. differentiable homograph, build cost volume")
         volume_sum = 0
         volume_sq_sum = 0
         for vid in range(num_views):
@@ -127,12 +129,13 @@ class MVSNet(nn.Module):
         volume_variance = volume_sq_sum.div_(num_views).sub_(volume_sum.div_(num_views).pow_(2))
 
         # step 3. cost volume regularization
-        logging.debug("step 3. cost volume regularization")
+        # logging.debug("step 3. cost volume regularization")
         cost_reg = self.cost_regularization(volume_variance)
         cost_reg = cost_reg.squeeze(1)
         prob_volume = F.softmax(cost_reg, dim=1)
         if prob_only:
             return features, prob_volume, cost_reg
+        logging.debug(f"prob_volume: {prob_volume.shape}")
         depth = depth_regression(prob_volume, depth_values=depth_values)
 
         with torch.no_grad():
@@ -142,7 +145,7 @@ class MVSNet(nn.Module):
             photometric_confidence = torch.gather(prob_volume_sum4, 1, depth_index.unsqueeze(1)).squeeze(1)
 
         # step 4. depth map refinement
-        logging.debug("step 4. depth map refinement")
+        # logging.debug("step 4. depth map refinement")
         if not self.refine:
             return depth, photometric_confidence, features, prob_volume # {"depth": depth, "photometric_confidence": photometric_confidence}
         else:
