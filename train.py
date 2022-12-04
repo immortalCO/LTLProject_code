@@ -180,7 +180,7 @@ def contour_rgb(pts):
     c0 *= 2
     c1 *= 2
     rgb = torch.where(z.expand(-1, 3) < 0.5, c0, c1)
-    return rgb
+    return rgb.clamp(min=0, max=1)
 
 def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None, marker='.', size=None):
     import matplotlib.pyplot as plt
