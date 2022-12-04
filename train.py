@@ -10,6 +10,8 @@ from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 import cv2
 from mvsnet import MVSNet
+import os
+import contextlib
 
 SCENES_DIR = "./datasets/NerfSyn/"
 TRAIN_SCENES = ["chair", "ficus", "materials"]
@@ -337,7 +339,8 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
             dep = ((pts[inliers] - pts_proj).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
             pix_dep = torch.ones(W * H, dtype=torch.float) * 10
             
-            with logging_redirect_tqdm():
+            # prevent scatter_reduce from printing
+            with open(os.devnull, "w") as f, contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):           
                 pix_dep.scatter_reduce_(0, pix_ind, dep, reduce="amin")
 
             pix_dep = pix_dep.reshape(W, H)
