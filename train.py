@@ -368,6 +368,8 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
                 rgb[train_pairs[i][1:], 2] = 1
                 plot(cam_centers, rgb=rgb, marker='o', size=50)
 
+        print(all_data[train_pairs[0][0]][0])
+
         for train_pair in train_pairs:
             cams = torch.stack([all_data[i][0] for i in train_pair], dim=0)
             imgs = torch.stack([all_data[i][1] for i in train_pair], dim=0)
