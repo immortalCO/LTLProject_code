@@ -11,7 +11,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 import cv2
 
 SCENES_DIR = "./datasets/NerfSyn/"
-TRAIN_SCENES = ["materials"]
+TRAIN_SCENES = ["chair", "ficus", "materials"]
 TEST_SCENES = ["drums", "hotdog", "lego", "mic", "ship"]
 
 DEFAULT_VIEW_DIR = [-1., -1., -1.]
@@ -341,7 +341,7 @@ def read_train_data(debug=False):
             pix_dep = pix_dep.reshape(W, H)
 
             if i <= 10:
-                print(pix_dep.aminmax())
+                print(pix_dep[pix_dep < 9].aminmax())
 
             holes = (pix_dep > 2) & mask
             pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.clamp(0, 1).numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
