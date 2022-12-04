@@ -167,7 +167,7 @@ def estimate_norm(pts,param=None):
 
 # Commented out IPython magic to ensure Python compatibility.
 # %matplotlib inline
-def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None):
+def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None, marker='.', size=None):
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.gridspec as gridspec
@@ -223,7 +223,7 @@ def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None):
             if (i & 2) != 0:    y = -y; laby = '-y'
             if (i & 1) != 0:    z = -z; labz = '-z'
 
-            ax.scatter(x, y, z, c=rgba, marker='.')
+            ax.scatter(x, y, z, c=rgba, marker=marker, s=size)
 
             xmid = (x.min() + x.max()) / 2
             ymid = (y.min() + y.max()) / 2
@@ -289,14 +289,17 @@ def read_train_data():
 
         train_config = json.load(open(f"{DATASET}/transforms_train.json"))
 
+        all_data = []
         cam_centers = []
 
         for i in tqdm(range(len(train_config['frames']))):
             cam, img = read_data_ns(DATASET, train_config, i)
+            all_data.append((cam, img))
             cam_centers.append(cam[2])
 
+        
         cam_centers = torch.stack([cam_centers[i] for i in train_views])
-        plot(cam_centers)
+        plot(cam_centers, marker='o', size=10)
 
         
 
