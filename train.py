@@ -302,11 +302,11 @@ def read_train_data():
         train_cam_centers = cam_centers[train_views]
         dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(8, dim=1, largest=False)
         
-        for i in range(train_views):
+        for i in range(len(train_views)):
             rgb = torch.zeros(8, 3)
             rgb[:1, 0] = 1
             rgb[1:, 2] = 1
-            plot(cam_centers[train_pairs], rgb=rgb, marker='o', size=50)
+            plot(cam_centers[train_pairs[i]], rgb=rgb, marker='o', size=50)
 
         break
 
