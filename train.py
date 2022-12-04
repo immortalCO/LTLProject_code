@@ -287,6 +287,16 @@ def read_train_data():
         logging.info(f"Read #{SCENE} train_views = {train_views} test_views = {test_views}")    
 
         train_config = json.load(open(f"{DATASET}/transforms_train.json"))
-        valid_config = json.load(open(f"{DATASET}/transforms_test.json"))
+
+        cam_centers = []
+
+        for i in range(len(train_config)):
+            cam, img = read_data_ns(DATASET, train_config, i)
+            cam_centers.append(cam[2])
+
+        cam_centers = torch.stack(cam_centers)
+        plot(cam_centers)
+
+        
 
         
