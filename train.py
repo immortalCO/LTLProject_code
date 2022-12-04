@@ -182,7 +182,7 @@ def contour_rgb(pts):
     rgb = torch.where(z.expand(-1, 3) < 0.5, c0, c1)
     return rgb.clamp(min=0, max=1)
 
-def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None, marker='.', size=None):
+def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None, marker='.', size=1):
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.gridspec as gridspec
@@ -203,7 +203,6 @@ def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None, m
         rgb = torch.zeros_like(pts)
 
     assert len(pts.shape) == 2
-    print(pts.shape, rgb.shape, conf.shape)
 
     pts = pts.clone().cpu().numpy()
     x, y, z = pts[:,0], pts[:,1], pts[:,2]
