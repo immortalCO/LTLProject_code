@@ -302,7 +302,8 @@ def read_data_ns(DATASET, config, i, debug=False):
     img = img * opa.unsqueeze(-1) + torch.tensor(BG_COLOR) * (1 - opa.unsqueeze(-1))
 
     cam_int[:2] = cam_int[:2] / 4
-    proj = cam_int @ cam_ext[:3, :4]
+    proj = torch.eye(4, dtype=torch.double)
+    proj[:3, :4] = cam_int @ cam_ext[:3, :4]
 
     return cam, proj, img, opa > opa_thres
 
@@ -381,6 +382,10 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
             imgs = torch.stack([all_data[i][1] for i in train_pair], dim=0)
             masks = torch.stack([all_data[i][2] for i in train_pair], dim=0)
             deps = torch.stack([all_data[i][3] for i in train_pair], dim=0)
+
+            inv_proj = torch.tensor(scipy.linalg.inv(cams[0].numpy()))
+            cams = cams @ inv_proj
+
             episodes.append((cams, imgs, masks, deps))
 
     logging.info("#episodes = %d" % len(episodes))
