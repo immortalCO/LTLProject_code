@@ -300,7 +300,11 @@ def read_data_ns(DATASET, config, i, debug=False):
     cam = (cam_mat, cam_mat_inv, cam_center)
 
     img = img * opa.unsqueeze(-1) + torch.tensor(BG_COLOR) * (1 - opa.unsqueeze(-1))
-    return cam, img, opa > opa_thres
+
+    cam_int[:2] = cam_int[:2] / 4
+    proj = cam_int @ cam_ext
+
+    return cam, proj, img, opa > opa_thres
 
 def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
@@ -323,7 +327,7 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
         cam_centers = []
 
         for i in tqdm(range(len(train_config['frames']))):
-            cam, img, mask = read_data_ns(DATASET, train_config, i)
+            cam, proj, img, mask = read_data_ns(DATASET, train_config, i)
            
             cam_centers.append(cam[2])
 
@@ -356,7 +360,7 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
                 # show(img)
                 show(1 - dep.clamp(0, 1))
 
-            all_data.append((cam, img, mask, dep))    
+            all_data.append((proj, img, mask, dep))    
 
         
         cam_centers = torch.stack(cam_centers)
@@ -373,7 +377,7 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
                 plot(cam_centers, rgb=rgb, marker='o', size=50)
 
         for train_pair in train_pairs:
-            cams = torch.stack([all_data[i][0][1] for i in train_pair], dim=0)
+            cams = torch.stack([all_data[i][0] for i in train_pair], dim=0)
             imgs = torch.stack([all_data[i][1] for i in train_pair], dim=0)
             masks = torch.stack([all_data[i][2] for i in train_pair], dim=0)
             deps = torch.stack([all_data[i][3] for i in train_pair], dim=0)

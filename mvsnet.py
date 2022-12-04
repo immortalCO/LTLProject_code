@@ -108,9 +108,7 @@ class MVSNet(nn.Module):
         if features is None:
             features = [self.feature(img) for img in imgs]
 
-        logging.debug(f"features: {features[0].shape} imgs: {imgs[0].shape}")
-
-        
+        # logging.debug(f"features: {features[0].shape} imgs: {imgs[0].shape}")
 
         # step 2. differentiable homograph, build cost volume
         # logging.debug("step 2. differentiable homograph, build cost volume")
@@ -135,7 +133,7 @@ class MVSNet(nn.Module):
         prob_volume = F.softmax(cost_reg, dim=1)
         if prob_only:
             return features, prob_volume, cost_reg
-        logging.debug(f"prob_volume: {prob_volume.shape}")
+        # logging.debug(f"prob_volume: {prob_volume.shape}")
         depth = depth_regression(prob_volume, depth_values=depth_values)
 
         with torch.no_grad():
