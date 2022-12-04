@@ -301,7 +301,7 @@ def read_data_ns(DATASET, config, i, debug=False):
 
     img = img * opa.unsqueeze(-1) + torch.tensor(BG_COLOR) * (1 - opa.unsqueeze(-1))
 
-    cam_int = torch.tensor([[focal, 0, 512 / 2], [0, focal, 640 / 2], [0, 0, 1]], dtype=torch.double)
+    # cam_int = torch.tensor([[focal, 0, 512 / 2], [0, focal, 640 / 2], [0, 0, 1]], dtype=torch.double)
     cam_int[:2] = cam_int[:2] / 4
     proj = torch.eye(4, dtype=torch.double)
     proj[:3, :4] = cam_int @ cam_ext[:3, :4]
