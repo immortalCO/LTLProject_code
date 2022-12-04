@@ -332,6 +332,7 @@ def read_train_data(debug=False):
             pix_ind = pix[:, 0] * W + pix[:, 1]
             pts_proj = pix2pts_ns(cam, pix_ind)
             dep = ((pts[inliers] - pts_proj).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
+            print(dep.aminmax())
             pix_dep = torch.ones(W * H, dtype=torch.float)
             
             with logging_redirect_tqdm():
