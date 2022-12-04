@@ -361,7 +361,7 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
                 # show(img)
                 show(1 - dep.clamp(0, 1))
 
-            all_data.append((proj, img, mask, dep))    
+            all_data.append((proj, img, mask, 1 - dep))    
 
         
         cam_centers = torch.stack(cam_centers)
