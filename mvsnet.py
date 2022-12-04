@@ -88,7 +88,7 @@ class RefineNet(nn.Module):
 
 class MVSNet(nn.Module):
     def __init__(self, refine=False):
-        super(MVSNet, self).__init__()
+        super().__init__()
         self.refine = refine
 
         self.feature = FeatureNet()
