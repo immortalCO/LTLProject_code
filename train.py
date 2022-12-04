@@ -290,7 +290,7 @@ def read_train_data():
 
         cam_centers = []
 
-        for i in range(len(train_config)):
+        for i in range(len(train_config['frames'])):
             cam, img = read_data_ns(DATASET, train_config, i)
             cam_centers.append(cam[2])
 
