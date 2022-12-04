@@ -355,13 +355,13 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
             pix_dep = torch.from_numpy(cv2.medianBlur(pix_dep.clamp(0, 1).numpy(), 5)).float()
 
             pix_dep[~mask] = 1
-            dep = pix_dep
+            dep = 1 - pix_dep.clamp(min=0, max=1)
 
             if debug:
                 # show(img)
                 show(1 - dep.clamp(0, 1))
 
-            all_data.append((proj, img, mask, 1 - dep))    
+            all_data.append((proj, img, mask, dep))    
 
         
         cam_centers = torch.stack(cam_centers)
