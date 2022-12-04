@@ -301,6 +301,7 @@ def read_data_ns(DATASET, config, i, debug=False):
 
 def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
+    episodes = []
     for SCENE in TRAIN_SCENES:
         DATASET = f"{SCENES_DIR}/{SCENE}/"
 
@@ -320,7 +321,7 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
 
         for i in tqdm(range(len(train_config['frames']))):
             cam, img, mask = read_data_ns(DATASET, train_config, i)
-            all_data.append((cam, img, mask))
+           
             cam_centers.append(cam[2])
 
             W, H, _ = img.shape
@@ -340,21 +341,18 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
 
             pix_dep = pix_dep.reshape(W, H)
 
-            if i <= 10:
-                print(pix_dep[pix_dep < 9].aminmax())
-
             holes = (pix_dep > 2) & mask
             pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.clamp(0, 1).numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
             pix_dep = torch.from_numpy(cv2.medianBlur(pix_dep.clamp(0, 1).numpy(), 5)).float()
 
             pix_dep[~mask] = 1
+            dep = pix_dep
 
-            if i <= 10:
+            if debug:
                 # show(img)
-                show(1 - pix_dep.clamp(0, 1))
-                if i == 10:
-                    return
-                
+                show(1 - dep.clamp(0, 1))
+
+            all_data.append((cam, img, mask, dep))    
 
         
         cam_centers = torch.stack(cam_centers)
@@ -370,8 +368,15 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
                 rgb[train_pairs[i][1:], 2] = 1
                 plot(cam_centers, rgb=rgb, marker='o', size=50)
 
+        for train_pair in train_pairs:
+            cams = torch.stack([all_data[i][0] for i in train_pair], dim=0)
+            imgs = torch.stack([all_data[i][1] for i in train_pair], dim=0)
+            masks = torch.stack([all_data[i][2] for i in train_pair], dim=0)
+            deps = torch.stack([all_data[i][3] for i in train_pair], dim=0)
+            episodes.append((cams, imgs, masks, deps))
 
-        break
+    logging.info("#episodes = %d" % len(episodes))
+    return episodes
 
         
 
