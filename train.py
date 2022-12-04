@@ -326,12 +326,12 @@ def read_train_data(debug=False):
             pix = pts2pix_ns(cam, pts)
             pix = pix.long()
  
-            mask = (pix[:, 0] >= 0) & (pix[:, 1] >= 0) & (pix[:, 0] < H) & (pix[:, 1] < W)
-            pix = pix[mask]
+            inliers = (pix[:, 0] >= 0) & (pix[:, 1] >= 0) & (pix[:, 0] < H) & (pix[:, 1] < W)
+            pix = pix[inliers]
 
             pix_ind = pix[:, 0] * W + pix[:, 1]
             pts_proj = pix2pts_ns(cam, pix_ind)
-            dep = ((pts[mask] - pts_proj).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
+            dep = ((pts[inliers] - pts_proj).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
             pix_dep = torch.ones(W * H, dtype=torch.float)
             
             with logging_redirect_tqdm():
@@ -341,6 +341,7 @@ def read_train_data(debug=False):
             
             if i <= 5:
                 show(img)
+                show(mask)
                 show(pix_dep)
                 return
                 
