@@ -298,7 +298,7 @@ def read_train_data():
             cam_centers.append(cam[2])
 
         
-        cam_centers = torch.stack([cam_centers[i] for i in train_views])
+        cam_centers = torch.stack(cam_centers)
         plot(cam_centers, marker='o', size=50)
 
         
