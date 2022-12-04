@@ -300,11 +300,13 @@ def read_train_data():
         
         cam_centers = torch.stack(cam_centers)
         train_cam_centers = cam_centers[train_views]
-        dist, train_nn_views = torch.cdist(train_cam_centers, cam_centers).topk(8, dim=1, largest=False)
-        dist = dist[:, 1:]
-        train_nn_views = train_nn_views[:, 1:]
-        print(dist)
-        print(train_nn_views)
+        dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(8, dim=1, largest=False)
+        
+        for i in range(train_views):
+            rgb = torch.zeros(8, 3)
+            rgb[:1, 0] = 1
+            rgb[1:, 2] = 1
+            plot(cam_centers[train_pairs], rgb=rgb, marker='o', size=50)
 
         break
 
