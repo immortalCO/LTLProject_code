@@ -333,16 +333,19 @@ def read_train_data(debug=False):
             pix_ind = pix[:, 0] * W + pix[:, 1]
             pts_proj = pix2pts_ns(cam, pix_ind)
             dep = ((pts[inliers] - pts_proj).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
-            pix_dep = torch.ones(W * H, dtype=torch.float) * 10
+            pix_dep = torch.ones(W * H, dtype=torch.float) * 1
             
             with logging_redirect_tqdm():
                 pix_dep.scatter_reduce_(0, pix_ind, dep, reduce="amin")
 
             pix_dep = pix_dep.reshape(W, H)
 
-            holes = (pix_dep > 2) & mask
-            pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
-            
+            # holes = (pix_dep > 2) & mask
+            # pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
+            pix_dep = cv2.pyrMeanShiftFiltering(pix_dep.numpy(), 10, 5)
+
+            pix_dep[~mask] = 1
+
             if i <= 10:
                 print(pix_dep.aminmax())
                 # show(img)
