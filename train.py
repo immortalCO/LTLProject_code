@@ -340,8 +340,8 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
             pix = pix[inliers]
 
             pix_ind = pix[:, 0] * W + pix[:, 1]
-            pts_proj = pix2pts_ns(cam, pix_ind)
-            dep = ((pts[inliers] - pts_proj).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
+            # pts_proj = pix2pts_ns(cam, pix_ind)
+            dep = ((pts[inliers] - cam[2]).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
             pix_dep = torch.ones(W * H, dtype=torch.float) * 10
             
             # prevent scatter_reduce from printing
