@@ -343,7 +343,7 @@ def read_train_data(debug=False):
                 print(pix_dep.aminmax())
                 show(img)
                 show(mask)
-                show(pix_dep)
+                show(1-pix_dep)
                 return
                 
 
