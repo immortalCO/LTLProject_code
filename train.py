@@ -308,7 +308,7 @@ def read_train_data():
             rgb[:, 1] = 1
             rgb[train_pairs[i], 1] = 0
             rgb[train_pairs[i][:1], 0] = 1
-            rgb[train_pairs[i][1:]:, 2] = 1
+            rgb[train_pairs[i][1:], 2] = 1
             plot(cam_centers, rgb=rgb, marker='o', size=50)
 
         break
