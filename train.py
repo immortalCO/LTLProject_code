@@ -300,7 +300,9 @@ def read_train_data():
         
         cam_centers = torch.stack(cam_centers)
         train_cam_centers = cam_centers[train_views]
-        dist, train_nn_views = torch.cdist(train_cam_centers, cam_centers).topk(7, dim=1, largest=False)
+        dist, train_nn_views = torch.cdist(train_cam_centers, cam_centers).topk(8, dim=1, largest=False)
+        dist = dist[:, 1:]
+        train_nn_views = train_nn_views[:, 1:]
         print(dist)
         print(train_nn_views)
 
