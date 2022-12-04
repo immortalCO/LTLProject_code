@@ -203,7 +203,7 @@ def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None, m
         rgb = torch.zeros_like(pts)
 
     assert len(pts.shape) == 2
-    print(pts, rgb, conf)
+    print(pts.shape, rgb.shape, conf.shape)
 
     pts = pts.clone().cpu().numpy()
     x, y, z = pts[:,0], pts[:,1], pts[:,2]
