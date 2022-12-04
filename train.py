@@ -22,6 +22,8 @@ BG_COLOR = [1, 1, 1]
 
 IMG_W = 800
 IMG_H = 800
+PRETRAIN_W = 640
+PRETRAIN_H = 512
 DEP_L = 2
 DEP_R = 6
 
@@ -301,10 +303,9 @@ def read_data_ns(DATASET, config, i, debug=False):
 
     img = img * opa.unsqueeze(-1) + torch.tensor(BG_COLOR) * (1 - opa.unsqueeze(-1))
 
-    # cam_int = torch.tensor([[focal, 0, 512 / 2], [0, focal, 640 / 2], [0, 0, 1]], dtype=torch.double)
     cam_int[:2] = cam_int[:2] / 4
-    cam_int[0] *= 640 / IMG_W
-    cam_int[1] *= 512 / IMG_H
+    cam_int[0] *= PRETRAIN_W / IMG_W
+    cam_int[1] *= PRETRAIN_H / IMG_H
     proj = torch.eye(4, dtype=torch.double)
     proj[:3, :4] = cam_int @ cam_ext[:3, :4]
 
