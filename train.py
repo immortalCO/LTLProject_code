@@ -304,10 +304,12 @@ def read_train_data():
         print(dist)
         
         for i in range(len(train_views)):
-            rgb = torch.zeros(8, 3)
-            rgb[:1, 0] = 1
-            rgb[1:, 2] = 1
-            plot(cam_centers[train_pairs[i]], rgb=rgb, marker='o', size=50)
+            rgb = torch.zeros_like(cam_centers)
+            rgb[:, 1] = 1
+            rgb[train_pairs[i], 1] = 0
+            rgb[train_pairs[i][:1], 0] = 1
+            rgb[train_pairs[i][1:]:, 2] = 1
+            plot(cam_centers, rgb=rgb, marker='o', size=50)
 
         break
 
