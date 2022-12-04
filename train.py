@@ -167,11 +167,29 @@ def estimate_norm(pts,param=None):
 
 # Commented out IPython magic to ensure Python compatibility.
 # %matplotlib inline
+def contour_rgb(pts):
+    r = torch.tensor([1, 0, 0]).float().cuda()
+    g = torch.tensor([0, 1, 0]).float().cuda()
+    b = torch.tensor([0, 0, 1]).float().cuda()
+    z = pts[:, 2].clone()
+    min, max = z.aminmax()
+    z = (z - min) / (max - min)
+    z = z.unsqueeze(-1)
+    c0 = (z - 0/2) * g + (1/2 - z) * b
+    c1 = (z - 1/2) * r + (2/2 - z) * g
+    c0 *= 2
+    c1 *= 2
+    rgb = torch.where(z.expand(-1, 3) < 0.5, c0, c1)
+    return rgb
+
 def plot(pts, conf=None, rgb=None, pov=[0], revcol=[False], dpi=64, save=None, marker='.', size=None):
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.gridspec as gridspec
     import numpy as np
+
+    if rgb is None:
+        rgb = contour_rgb(pts.cuda())
 
     if len(pts.shape) > 2:
         pts = pts.squeeze(0)
@@ -277,7 +295,7 @@ def read_data_ns(DATASET, config, i, debug=False):
     img = img * opa.unsqueeze(-1) + torch.tensor(BG_COLOR) * (1 - opa.unsqueeze(-1))
     return cam, img
 
-def read_train_data():
+def read_train_data(debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
     for SCENE in TRAIN_SCENES:
         DATASET = f"{SCENES_DIR}/{SCENE}/"
@@ -301,15 +319,19 @@ def read_train_data():
         cam_centers = torch.stack(cam_centers)
         train_cam_centers = cam_centers[train_views]
         dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(8, dim=1, largest=False)
-        print(dist)
         
-        for i in range(len(train_views)):
-            rgb = torch.zeros_like(cam_centers)
-            rgb[:, 1] = 1
-            rgb[train_pairs[i], 1] = 0
-            rgb[train_pairs[i][:1], 0] = 1
-            rgb[train_pairs[i][1:], 2] = 1
-            plot(cam_centers, rgb=rgb, marker='o', size=50)
+        if debug:
+            for i in range(len(train_views)):
+                rgb = torch.zeros_like(cam_centers)
+                rgb[:, 1] = 1
+                rgb[train_pairs[i], 1] = 0
+                rgb[train_pairs[i][:1], 0] = 1
+                rgb[train_pairs[i][1:], 2] = 1
+                plot(cam_centers, rgb=rgb, marker='o', size=50)
+
+        cloud = torch.load(f"{DATASET}/cloud_ref.pth")
+        print(cloud)
+        plot(cloud)
 
         break
 
