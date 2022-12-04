@@ -38,6 +38,8 @@ def show(img, save=None):
     ax = plt.Axes(fig, [0., 0., 1., 1.])
     ax.set_axis_off()
     fig.add_axes(ax)
+    if isinstance(img, torch.Tensor):
+        img = img.cpu()
     # img = torch.from_numpy(cv2.resize(img.float().numpy(), [IMG_W, IMG_H]))
     if len(img.shape) == 3:
         ax.imshow(img)
