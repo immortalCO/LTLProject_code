@@ -299,7 +299,12 @@ def read_train_data():
 
         
         cam_centers = torch.stack(cam_centers)
-        plot(cam_centers, marker='o', size=50)
+        train_cam_centers = cam_centers[train_views]
+        dist, train_nn_views = torch.cdist(train_cam_centers, cam_centers).topk(7, dim=1, largest=False)
+        print(dist)
+        print(train_nn_views)
+
+        break
 
         
 
