@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .module import *
+from module import *
 
 
 class FeatureNet(nn.Module):
