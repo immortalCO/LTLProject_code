@@ -9,6 +9,7 @@ import logging
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 import cv2
+from mvsnet import MVSNet
 
 SCENES_DIR = "./datasets/NerfSyn/"
 TRAIN_SCENES = ["chair", "ficus", "materials"]
@@ -379,5 +380,8 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
     return episodes
 
         
-
-        
+def load_mvsnet(ckpt_file):
+    mvsnet = MVSNet()
+    mvsnet.load_state_dict(torch.load(ckpt_file))
+    mvsnet = mvsnet.cuda()
+    return mvsnet
