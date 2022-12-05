@@ -490,7 +490,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     train_loader = episode.loader(batch_size=batch_size//2, shuffle=True, pin_memory=True)
     for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(train_loader):
         # print("debug train", i, flush=True)
-        if i >= 3:
+        if i >= 2:
             break
 
         maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
@@ -520,7 +520,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     test_loader = episode.loader(batch_size=batch_size, shuffle=False, pin_memory=True)
     test_loss = 0
     for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(test_loader):
-        if i >= 8:
+        if i >= 4:
             break
 
         count = batch_imgs.shape[0]
@@ -528,10 +528,11 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         batch_masks = batch_masks[:, 0].cuda() 
         batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
         loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / len(episode)
-        loss.backward()
-        test_loss += loss.item()
+        test_loss += loss
 
-    return test_loss
+    test_loss.backward()
+
+    return test_loss.item()
 
 def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     import copy
