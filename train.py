@@ -499,7 +499,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         
         for name in var_names:
             p = eval(f"mvsnet.{name}", {"mvsnet" : mvsnet})
-            (params_loss if name.startswith("loss") else params_net)[name] = p
+            (params_loss if name.startswith("loss_net") else params_net)[name] = p
 
         grad = torch.autograd.grad(maml_loss, params_net.values(), create_graph=False, allow_unused=True)
         for name, g in zip(params_net.keys(), grad):
