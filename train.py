@@ -494,24 +494,21 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
 
         maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
 
-        names_net = []
-        names_loss = []
         params_net = {}
         params_loss = {}
         
         for name in var_names:
             p = eval(f"mvsnet.{name}", {"mvsnet" : mvsnet})
             (params_loss if name.startswith("loss") else params_net)[name] = p
-            (names_loss if name.startswith("loss") else names_net).append(name)
 
-        grad = torch.autograd.grad(maml_loss, params_net, create_graph=False, allow_unused=True)
-        for name, g in zip(names_net, grad):
+        grad = torch.autograd.grad(maml_loss, params_net.values(), create_graph=False, allow_unused=True)
+        for name, g in zip(params_net.keys(), grad):
             if g is not None:
                 exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
                     {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
 
-        grad = torch.autograd.grad(maml_loss, params_loss, create_graph=True, allow_unused=True)
-        for name, g in zip(names_loss, grad):
+        grad = torch.autograd.grad(maml_loss, params_loss.values(), create_graph=True, allow_unused=True)
+        for name, g in zip(params_loss.keys(), grad):
             if g is not None:
                 exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
                     {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
