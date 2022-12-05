@@ -478,43 +478,47 @@ def fix_name(name):
 
 def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     import copy
-    mvsnet = copy.deepcopy(mvsnet_orig)
-    mvsnet.zero_grad()
+    
+    var_names = [fix_name(name) for name, _ in mvsnet_orig.named_parameters()]
 
-    var_names = [fix_name(name) for name, _ in mvsnet.named_parameters()]
-
-    for name in var_names:
-        exec(f"del mvsnet.{name}")
-        var = eval(f"mvsnet_orig.{name}")
-        exec(f"mvsnet.{name} = var.clone()")
-
-    mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     batches = [batch for batch in train_loader]
     n = len(batches)
+    train_batches = batches[:n // 2]
+    valid_batches = batches[n // 2:]
 
-    for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(batches[:n // 2]):
-        maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
-
-        params = [eval(f"mvsnet.{name}", {"mvsnet" : mvsnet}) for name in var_names]
-        grad = torch.autograd.grad(maml_loss, params, create_graph=True, retain_graph=False, allow_unused=True)
-        for name, g in zip(var_names, grad):
-            if g is not None:
-                exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
-                    {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
-
-    mvsnet.eval()
     test_loss = 0
-    for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(batches[n // 2:]):
+    count_all = sum(batch[0].shape[0] for batch in valid_batches)
+
+    for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(valid_batches):
+        mvsnet = copy.deepcopy(mvsnet_orig)
+        mvsnet.zero_grad()
+        for name in var_names:
+            exec(f"del mvsnet.{name}")
+            var = eval(f"mvsnet_orig.{name}")
+            exec(f"mvsnet.{name} = var.clone()")
+        mvsnet.eval()
+
+        for j, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(train_batches):
+            maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
+
+            params = [eval(f"mvsnet.{name}", {"mvsnet" : mvsnet}) for name in var_names]
+            grad = torch.autograd.grad(maml_loss, params, create_graph=True, retain_graph=False, allow_unused=True)
+            for name, g in zip(var_names, grad):
+                if g is not None:
+                    exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
+                        {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
+
         count = batch_imgs.shape[0]
         pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
         batch_masks = batch_masks[:, 0].cuda() 
         batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
-        loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / len(episode)
-        test_loss = test_loss + loss
+        loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / count_all
+        loss.backward()
+        
+        test_loss += loss.item()
 
-    test_loss.backward()
-    return test_loss.item()
+    return test_loss
 
 def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     import copy
