@@ -511,9 +511,37 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
 
     return test_loss
 
-def maml_train(mvsnet, episodes, batch_size=2, lr=0.005, alpha=0.01, epochs=100):
+def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
+    import copy
+    mvsnet = copy.deepcopy(mvsnet_orig)
+    mvsnet.zero_grad()
+    opt = torch.optim.SGD(mvsnet.parameters(), lr=alpha)
+
+    mvsnet.eval()
+    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
+    for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
+        maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
+        opt.zero_grad()
+        maml_loss.backward()
+        opt.step()
+
+    mvsnet.eval()
+    test_loader = episode.loader(batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loss = 0
+    for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
+        count = batch_imgs.shape[0]
+        with torch.no_grad():
+            pred_deps = mvsnet(batch_imgs, batch_cams)
+            batch_masks = batch_masks[:, 0].cuda()
+            batch_deps = batch_deps[:, 0].cuda()
+            loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / len(episode)
+            test_loss += loss.item()
+
+    return test_loss
+
+def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0.01, epochs=100):
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=25, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.5)
 
     mvsnet.eval()
     for epoch in range(epochs):
@@ -530,4 +558,13 @@ def maml_train(mvsnet, episodes, batch_size=2, lr=0.005, alpha=0.01, epochs=100)
         sch.step()
 
         logging.info(f"train #{epoch} loss = {epoch_loss:.8f}")
+
+        if epoch % 5 == 0:
+            valid_loss = 0
+            for i, episode in enumerate(valid_episodes):
+                loss = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
+                valid_loss = valid_loss + loss
+                logging.info(f"valid #{epoch} episode #{i} loss = {loss:.6f}")
+            valid_loss /= len(valid_episodes)
+            logging.info(f"valid #{epoch} loss = {valid_loss:.8f}")
 
