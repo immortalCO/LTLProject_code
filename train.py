@@ -479,7 +479,8 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         exec(f"mvsnet.{name} = var.clone()")
 
     mvsnet.train()
-    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader = tqdm(episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True))
+    train_loader.set_description("train")
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
         pred_deps, maml_loss = mvsnet(batch_imgs, batch_cams)
 
@@ -491,7 +492,8 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
                     {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
 
     mvsnet.eval()
-    test_loader = episode.loader(batch_size=batch_size * 2, shuffle=False, pin_memory=True)
+    test_loader = tqdm(episode.loader(batch_size=batch_size * 2, shuffle=False, pin_memory=True))
+    test_loader.set_description("test")
     test_loss = 0
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         count = batch_imgs.shape[0]
