@@ -489,7 +489,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size//2, shuffle=True, pin_memory=True)
     for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(train_loader):
-        print("debug train", i, flush=True)
+        # print("debug train", i, flush=True)
         if i >= 4:
             break
 
