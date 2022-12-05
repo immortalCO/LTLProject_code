@@ -386,7 +386,7 @@ def read_train_data(SCENE, debug=False):
     
     cam_centers = torch.stack(cam_centers)
     train_cam_centers = cam_centers[train_views]
-    dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(6, dim=1, largest=False)
+    dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(5, dim=1, largest=False)
     
     if debug:
         for i in range(len(train_views)):
@@ -511,7 +511,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
 
     return test_loss
 
-def maml_train(mvsnet, episodes, batch_size=2, lr=0.01, alpha=0.02, epochs=100):
+def maml_train(mvsnet, episodes, batch_size=2, lr=0.005, alpha=0.01, epochs=100):
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=25, gamma=0.5)
 
