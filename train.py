@@ -450,14 +450,19 @@ class MVSNetMAML(nn.Module):
         super().__init__()
         self.mvsnet = MVSNetPretrained(ckpt)
         self.loss_net = nn.Sequential(
-            nn.Conv2d(192, 24, 5, 5, 5),
+            nn.Conv2d(24, 12, 5, 2, 2),
             nn.ReLU(),
-            nn.Conv2d(24, 3, 5, 5, 5),
+            nn.Conv2d(12, 4, 5, 2, 2),
         )
 
     def forward(self, *args, training=False):
         if training:
             features = self.mvsnet(*args, prob_only=True)[-1]
+            # (B, 192, H, W)
+            B, _, H, W = features.shape
+            features = features.reshape(B, 24, 8, H, W).mean(dim=2)
+            # (B, 24, H, W)
+
             maml_loss = self.loss_net(features[0]).mean(dim=(-1,-2)).norm(dim=-1).mean()
             return maml_loss
 
