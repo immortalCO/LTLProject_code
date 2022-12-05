@@ -332,6 +332,9 @@ def read_train_data(SCENE, all_views=False, debug=False):
     batch = []
 
     DATASET = f"{SCENES_DIR}/{SCENE}/"
+    train_config = json.load(open(f"{DATASET}/transforms_train.json"))
+    if all_views:
+        train_views = list(range(len(train_config['frames'])))
 
     train_views = pairs[f"{SCENE}_train"]
     test_views = pairs[f"{SCENE}_test"]
@@ -342,10 +345,6 @@ def read_train_data(SCENE, all_views=False, debug=False):
     # plot(pts)
     logging.info(f"cloud shape = {pts.shape}")
 
-    train_config = json.load(open(f"{DATASET}/transforms_train.json"))
-
-    if all_views:
-        train_views = list(range(len(train_config['frames'])))
 
     all_data = []
     cam_centers = []
@@ -489,8 +488,11 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         exec(f"mvsnet.{name} = var.clone()")
 
     mvsnet.eval()
-    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
-    for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
+    train_loader = episode.loader(batch_size=batch_size // 2, shuffle=True, pin_memory=True)
+    for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(train_loader):
+        if i >= 4:
+            break
+
         maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
 
         params = [eval(f"mvsnet.{name}", {"mvsnet" : mvsnet}) for name in var_names]
@@ -503,7 +505,10 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     mvsnet.eval()
     test_loader = episode.loader(batch_size=batch_size, shuffle=False, pin_memory=True)
     test_loss = 0
-    for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
+    for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(test_loader):
+        if i >= 8:
+            break
+
         count = batch_imgs.shape[0]
         pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
         batch_masks = batch_masks[:, 0].cuda() 
