@@ -12,6 +12,7 @@ import cv2
 from mvsnet import MVSNet
 import os
 import contextlib
+import torchvision
 
 SCENES_DIR = "./datasets/NerfSyn/"
 TRAIN_SCENES = ["chair", "ficus", "materials"]
@@ -397,9 +398,39 @@ def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
     logging.info("#episodes = %d" % len(episodes))
     return episodes
 
-        
 def load_mvsnet(ckpt):
     mvsnet = MVSNet()
     mvsnet.load_state_dict(ckpt)
     mvsnet = mvsnet.cuda()
     return mvsnet
+
+class MVSNetPretrained(nn.Module):
+    def __init__(self, ckpt):
+        super().__init__()
+        self.mvsnet = load_mvsnet(ckpt)
+
+    def forward(self, batch_imgs, batch_cams, prob_only=False):
+        batch_size = batch_imgs.shape[0]
+
+        batch_imgs = batch_imgs.float().permute(0, 1, 4, 2, 3).cuda()
+        batch_cams = batch_cams.float().cuda()
+        batch_deps = batch_deps[:, 0].cuda()
+        dep_vals = torch.arange(192).cuda().unsqueeze(0).repeat(batch_size, 1) / 192
+        dep_vals = dep_vals * (DEP_R - DEP_L) + DEP_L
+
+        batch_imgs = torchvision.transforms.Resize([PRETRAIN_H, PRETRAIN_W])(
+            batch_imgs.reshape(-1, *batch_imgs.shape[2:])).reshape(
+                batch_size, -1, 3, PRETRAIN_H, PRETRAIN_W)
+        
+        if prob_only:
+            return self.mvsnet(batch_imgs, batch_cams, dep_vals, batch_deps, prob_only=True)
+        
+        pred_deps, conf, features, prob_volume = self.mvsnet(batch_imgs, batch_cams, dep_vals, prob_only=False)
+        pred_deps = 1 - (pred_deps - DEP_L) / (DEP_R - DEP_L)
+
+        pred_deps = torchvision.transforms.Resize([IMG_H, IMG_W])(pred_deps) 
+        return pred_deps, conf, features, prob_volume
+        
+
+
+        
