@@ -388,7 +388,7 @@ def read_train_data(SCENE, all_views=False, debug=False):
     
     cam_centers = torch.stack(cam_centers)
     train_cam_centers = cam_centers[train_views]
-    dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(4, dim=1, largest=False)
+    dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(6, dim=1, largest=False)
     
     if debug:
         for i in range(len(train_views)):
@@ -494,9 +494,24 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
 
         maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
 
-        params = [eval(f"mvsnet.{name}", {"mvsnet" : mvsnet}) for name in var_names]
-        grad = torch.autograd.grad(maml_loss, params, create_graph=True, allow_unused=True)
-        for name, g in zip(var_names, grad):
+        names_net = []
+        names_loss = []
+        params_net = {}
+        params_loss = {}
+        
+        for name in var_names:
+            p = eval(f"mvsnet.{name}", {"mvsnet" : mvsnet})
+            (params_loss if name.startswith("loss") else params_net)[name] = p
+            (names_loss if name.startswith("loss") else names_net).append(name)
+
+        grad = torch.autograd.grad(maml_loss, params_net, create_graph=False, allow_unused=True)
+        for name, g in zip(names_net, grad):
+            if g is not None:
+                exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
+                    {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
+
+        grad = torch.autograd.grad(maml_loss, params_loss, create_graph=True, allow_unused=True)
+        for name, g in zip(names_loss, grad):
             if g is not None:
                 exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
                     {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
