@@ -451,15 +451,13 @@ class MVSNetMAML(nn.Module):
         self.mvsnet = MVSNetPretrained(ckpt)
         self.loss_net = nn.Sequential(
             nn.Conv2d(192, 24, 5, 2, 2),
-            nn.BatchNorm2d(24),
             nn.ReLU(),
             nn.Conv2d(24, 3, 5, 2, 2),
         )
 
-    def forward(self, *args):
-        if self.training:
+    def forward(self, *args, training=False):
+        if training:
             features = self.mvsnet(*args, prob_only=True)[-1]
-            logging.debug(f"features = {features.shape}")
             maml_loss = self.loss_net(features[0]).mean(dim=(-1,-2)).norm(dim=-1).mean()
             return maml_loss
 
@@ -483,7 +481,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         var = eval(f"mvsnet_orig.{name}")
         exec(f"mvsnet.{name} = var.clone()")
 
-    mvsnet.train()
+    mvsnet.eval()
     train_loader = tqdm(episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True))
     train_loader.set_description("train")
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
@@ -513,6 +511,7 @@ def maml_train(mvsnet, episodes, batch_size=2, lr=0.01, alpha=0.02, epochs=100):
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=25, gamma=0.5)
 
+    mvsnet.eval()
     for epoch in range(epochs):
         opt.zero_grad()
 
