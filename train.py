@@ -466,7 +466,7 @@ def fix_name(name):
     fixed = re.sub(r"\.(\d{1,})\.", r"[\1].", name)
     return fixed
 
-def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, batch_size=1, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
