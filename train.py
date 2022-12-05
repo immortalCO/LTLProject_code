@@ -521,9 +521,9 @@ def maml_train(mvsnet, episodes, batch_size=2, lr=0.01, alpha=0.02, epochs=100):
 
         epoch_loss = 0
         for i, episode in enumerate(episodes):
-            logging.info(f"train #{epoch} episode #{i}")
             loss = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
             epoch_loss = epoch_loss + loss
+            logging.info(f"train #{epoch} episode #{i} loss = {loss:.4f}")
         epoch_loss /= len(episodes)
         
         opt.step()
