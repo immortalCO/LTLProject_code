@@ -478,6 +478,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         var = eval(f"mvsnet_orig.{name}")
         exec(f"mvsnet.{name} = var.clone()")
 
+    mvsnet.train()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
         pred_deps, maml_loss = mvsnet(batch_imgs, batch_cams)
@@ -487,6 +488,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         for name, g in zip(var_names, grad):
             exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g")
 
+    mvsnet.eval()
     test_loader = episode.loader(batch_size=batch_size * 2, shuffle=False, pin_memory=True)
     test_loss = 0
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
@@ -503,7 +505,6 @@ def maml_train(mvsnet, episodes, batch_size=2, lr=0.01, alpha=0.02, epochs=100):
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=25, gamma=0.5)
 
     for epoch in range(epochs):
-        mvsnet.train()
         opt.zero_grad()
 
         epoch_loss = 0
