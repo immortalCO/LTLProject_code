@@ -547,7 +547,7 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0
     best_valid_ckpt = None
 
     mvsnet.eval()
-    for epoch in range(epochs):
+    for epoch in range(1, epochs + 1):
         opt.zero_grad()
 
         epoch_loss = 0
