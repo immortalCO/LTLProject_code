@@ -15,8 +15,8 @@ import contextlib
 import torchvision
 
 SCENES_DIR = "./datasets/NerfSyn/"
-TRAIN_SCENES = ["chair", "ficus", "materials"]
-TEST_SCENES = ["drums", "hotdog", "lego", "mic", "ship"]
+TRAIN_SCENES = ["chair", "ficus", "materials", "mic"]
+TEST_SCENES = ["drums", "hotdog", "lego", "ship"]
 
 DEFAULT_VIEW_DIR = [-1., -1., -1.]
 BG_COLOR = [1, 1, 1]
@@ -314,89 +314,93 @@ def read_data_ns(DATASET, config, i, debug=False):
 
     return cam, proj, img, opa > opa_thres
 
-def read_train_data(TRAIN_SCENES=TRAIN_SCENES, debug=False):
+def read_train_data(SCENE, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
-    episodes = []
-    for SCENE in TRAIN_SCENES:
-        DATASET = f"{SCENES_DIR}/{SCENE}/"
+    batch = []
 
-        train_views = pairs[f"{SCENE}_train"]
-        test_views = pairs[f"{SCENE}_test"]
+    DATASET = f"{SCENES_DIR}/{SCENE}/"
+
+    train_views = pairs[f"{SCENE}_train"]
+    test_views = pairs[f"{SCENE}_test"]
+    
+    logging.info(f"Read #{SCENE} train_views = {train_views}")  
+
+    pts = torch.load(f"{DATASET}/cloud_ref.pth")
+    # plot(pts)
+    logging.info(f"cloud shape = {pts.shape}")
+
+    train_config = json.load(open(f"{DATASET}/transforms_train.json"))
+
+    all_data = []
+    cam_centers = []
+
+    for i in tqdm(range(len(train_config['frames']))):
+        cam, proj, img, mask = read_data_ns(DATASET, train_config, i)
         
-        logging.info(f"Read #{SCENE} train_views = {train_views} test_views = {test_views}")  
+        cam_centers.append(cam[2])
 
-        pts = torch.load(f"{DATASET}/cloud_ref.pth")
-        # plot(pts)
-        logging.info(f"cloud shape = {pts.shape}")
+        W, H, _ = img.shape
+        pix = pts2pix_ns(cam, pts)
+        pix = pix.long()
 
-        train_config = json.load(open(f"{DATASET}/transforms_train.json"))
+        inliers = (pix[:, 0] >= 0) & (pix[:, 1] >= 0) & (pix[:, 0] < H) & (pix[:, 1] < W)
+        pix = pix[inliers]
 
-        all_data = []
-        cam_centers = []
-
-        for i in tqdm(range(len(train_config['frames']))):
-            cam, proj, img, mask = read_data_ns(DATASET, train_config, i)
-           
-            cam_centers.append(cam[2])
-
-            W, H, _ = img.shape
-            pix = pts2pix_ns(cam, pts)
-            pix = pix.long()
- 
-            inliers = (pix[:, 0] >= 0) & (pix[:, 1] >= 0) & (pix[:, 0] < H) & (pix[:, 1] < W)
-            pix = pix[inliers]
-
-            pix_ind = pix[:, 0] * W + pix[:, 1]
-            # pts_proj = pix2pts_ns(cam, pix_ind)
-            dep = ((pts[inliers] - cam[2]).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
-            pix_dep = torch.ones(W * H, dtype=torch.float) * 10
-            
-            # prevent scatter_reduce from printing
-            with open(os.devnull, "w") as f, contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):           
-                pix_dep.scatter_reduce_(0, pix_ind, dep, reduce="amin")
-
-            pix_dep = pix_dep.reshape(W, H)
-
-            holes = (pix_dep > 2) & mask
-            pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.clamp(0, 1).numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
-            pix_dep = torch.from_numpy(cv2.medianBlur(pix_dep.clamp(0, 1).numpy(), 5)).float()
-
-            pix_dep[~mask] = 1
-            dep = 1 - pix_dep.clamp(min=0, max=1)
-
-            if debug:
-                # show(img)
-                show(1 - dep.clamp(0, 1))
-
-            all_data.append((proj, img, mask, dep))    
-
+        pix_ind = pix[:, 0] * W + pix[:, 1]
+        # pts_proj = pix2pts_ns(cam, pix_ind)
+        dep = ((pts[inliers] - cam[2]).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
+        pix_dep = torch.ones(W * H, dtype=torch.float) * 10
         
-        cam_centers = torch.stack(cam_centers)
-        train_cam_centers = cam_centers[train_views]
-        dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(8, dim=1, largest=False)
-        
+        # prevent scatter_reduce from printing
+        with open(os.devnull, "w") as f, contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):           
+            pix_dep.scatter_reduce_(0, pix_ind, dep, reduce="amin")
+
+        pix_dep = pix_dep.reshape(W, H)
+
+        holes = (pix_dep > 2) & mask
+        pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.clamp(0, 1).numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
+        pix_dep = torch.from_numpy(cv2.medianBlur(pix_dep.clamp(0, 1).numpy(), 5)).float()
+
+        pix_dep[~mask] = 1
+        dep = 1 - pix_dep.clamp(min=0, max=1)
+
         if debug:
-            for i in range(len(train_views)):
-                rgb = torch.zeros_like(cam_centers)
-                rgb[:, 1] = 1
-                rgb[train_pairs[i], 1] = 0
-                rgb[train_pairs[i][:1], 0] = 1
-                rgb[train_pairs[i][1:], 2] = 1
-                plot(cam_centers, rgb=rgb, marker='o', size=50)
+            # show(img)
+            show(1 - dep.clamp(0, 1))
 
-        for train_pair in train_pairs:
-            cams = torch.stack([all_data[i][0] for i in train_pair], dim=0)
-            imgs = torch.stack([all_data[i][1] for i in train_pair], dim=0)
-            masks = torch.stack([all_data[i][2] for i in train_pair], dim=0)
-            deps = torch.stack([all_data[i][3] for i in train_pair], dim=0)
+        all_data.append((proj, img, mask, dep))    
 
-            inv_proj = torch.tensor(scipy.linalg.inv(cams[0].numpy()))
-            cams = cams @ inv_proj
+    
+    cam_centers = torch.stack(cam_centers)
+    train_cam_centers = cam_centers[train_views]
+    dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(8, dim=1, largest=False)
+    
+    if debug:
+        for i in range(len(train_views)):
+            rgb = torch.zeros_like(cam_centers)
+            rgb[:, 1] = 1
+            rgb[train_pairs[i], 1] = 0
+            rgb[train_pairs[i][:1], 0] = 1
+            rgb[train_pairs[i][1:], 2] = 1
+            plot(cam_centers, rgb=rgb, marker='o', size=50)
 
-            episodes.append((cams, imgs, masks, deps))
+    for train_pair in train_pairs:
+        cams = torch.stack([all_data[i][0] for i in train_pair], dim=0)
+        imgs = torch.stack([all_data[i][1] for i in train_pair], dim=0)
+        masks = torch.stack([all_data[i][2] for i in train_pair], dim=0)
+        deps = torch.stack([all_data[i][3] for i in train_pair], dim=0)
 
-    logging.info("#episodes = %d" % len(episodes))
-    return episodes
+        inv_proj = torch.tensor(scipy.linalg.inv(cams[0].numpy()))
+        cams = cams @ inv_proj
+
+        batch.append((cams, imgs, masks, deps))
+
+    logging.info("#batch = %d" % len(batch))
+    cams = torch.stack([b[0] for b in batch], dim=0)
+    imgs = torch.stack([b[1] for b in batch], dim=0)
+    masks = torch.stack([b[2] for b in batch], dim=0)
+    deps = torch.stack([b[3] for b in batch], dim=0)
+    return cams, imgs, masks, deps
 
 def load_mvsnet(ckpt):
     mvsnet = MVSNet()
@@ -432,4 +436,18 @@ class MVSNetPretrained(nn.Module):
         
 
 
-        
+class MVSNetMAML(nn.Module):
+    def __init__(self, ckpt):
+        super().__init__()
+        self.mvsnet = MVSNetPretrained(ckpt)
+        self.loss_net = nn.Sequential(
+            nn.Conv2d(32, 16, 5, 2, 2),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.Conv2d(16, 8, 5, 2, 2),
+        )
+
+    def forward(self, *args):
+        pred_deps, conf, features, prob_volume = self.mvsnet(*args)
+        maml_loss = self.loss_net(features[0]).mean(dim=(-1,-2)).norm(dim=-1)
+        return pred_deps, maml_loss
