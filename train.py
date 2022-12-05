@@ -490,32 +490,32 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     test_loss = 0
     count_all = sum(batch[0].shape[0] for batch in valid_batches)
 
+   
+    mvsnet = copy.deepcopy(mvsnet_orig)
+    mvsnet.zero_grad()
+    for name in var_names:
+        exec(f"del mvsnet.{name}")
+        var = eval(f"mvsnet_orig.{name}")
+        exec(f"mvsnet.{name} = var.clone()")
+    mvsnet.eval()
+
+    for j, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(train_batches):
+        maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
+
+        params = [eval(f"mvsnet.{name}", {"mvsnet" : mvsnet}) for name in var_names]
+        grad = torch.autograd.grad(maml_loss, params, create_graph=True, retain_graph=False, allow_unused=True)
+        for name, g in zip(var_names, grad):
+            if g is not None:
+                exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
+                    {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
+    
     for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(valid_batches):
-        mvsnet = copy.deepcopy(mvsnet_orig)
-        mvsnet.zero_grad()
-        for name in var_names:
-            exec(f"del mvsnet.{name}")
-            var = eval(f"mvsnet_orig.{name}")
-            exec(f"mvsnet.{name} = var.clone()")
-        mvsnet.eval()
-
-        for j, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(train_batches):
-            maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
-
-            params = [eval(f"mvsnet.{name}", {"mvsnet" : mvsnet}) for name in var_names]
-            grad = torch.autograd.grad(maml_loss, params, create_graph=True, retain_graph=False, allow_unused=True)
-            for name, g in zip(var_names, grad):
-                if g is not None:
-                    exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
-                        {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
-
         count = batch_imgs.shape[0]
         pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
         batch_masks = batch_masks[:, 0].cuda() 
         batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
         loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / count_all
         loss.backward()
-        
         test_loss += loss.item()
 
     return test_loss
@@ -548,9 +548,9 @@ def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
 
     return test_loss
 
-def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.005, epochs=100):
+def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.05, epochs=1000):
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
 
     best_valid_loss = 1e9
     best_valid_ckpt = None
