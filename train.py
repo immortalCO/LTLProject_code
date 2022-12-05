@@ -468,7 +468,7 @@ def fix_name(name):
 
 def maml_train_step(mvsnet_orig, episode, alpha=0.02, lr=1e-3):
     import copy
-    mvsnet = copy.copy(mvsnet_orig)
+    mvsnet = copy.deepcopy(mvsnet_orig)
 
     var_names = [fix_name(name) for name, _ in mvsnet.named_parameters()]
 
