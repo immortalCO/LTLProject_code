@@ -314,6 +314,19 @@ def read_data_ns(DATASET, config, i, debug=False):
 
     return cam, proj, img, opa > opa_thres
 
+class MVSDataset(torch.utils.data.Dataset):
+    def __init__(self, batches):
+        self.batches = batches
+    
+    def __len__(self):
+        return len(self.batches)
+
+    def __getitem__(self, idx):
+        return self.batches[idx]
+
+    def loader(self, **kwargs):
+        return torch.utils.data.DataLoader(self, **kwargs)
+
 def read_train_data(SCENE, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
     batch = []
@@ -396,11 +409,7 @@ def read_train_data(SCENE, debug=False):
         batch.append((cams, imgs, masks, deps))
 
     logging.info("#batch = %d" % len(batch))
-    cams = torch.stack([b[0] for b in batch], dim=0)
-    imgs = torch.stack([b[1] for b in batch], dim=0)
-    masks = torch.stack([b[2] for b in batch], dim=0)
-    deps = torch.stack([b[3] for b in batch], dim=0)
-    return cams, imgs, masks, deps
+    return MVSDataset(batch)
 
 def load_mvsnet(ckpt):
     mvsnet = MVSNet()
