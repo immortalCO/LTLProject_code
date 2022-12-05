@@ -461,8 +461,7 @@ class MVSNetMAML(nn.Module):
 
     def forward(self, *args, training=False):
         if training:
-            with torch.no_grad():
-                features = self.mvsnet(*args, prob_only=True)[-1]
+            features = self.mvsnet(*args, prob_only=True)[-1]
 
             maml_loss = self.loss_net(features).mean(dim=(-1,-2)).norm(dim=-1).mean()
             return maml_loss
@@ -488,9 +487,9 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         exec(f"mvsnet.{name} = var.clone()")
 
     mvsnet.eval()
-    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader = episode.loader(batch_size=batch_size//2, shuffle=True, pin_memory=True)
     for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(train_loader):
-        if i >= 8:
+        if i >= 4:
             break
 
         maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
@@ -523,10 +522,14 @@ def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
+    for param in mvsnet.loss_net.parameters():
+        param.requires_grad = False
+
     opt = torch.optim.SGD(mvsnet.parameters(), lr=alpha)
 
     mvsnet.eval()
-    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
+
+    train_loader = episode.loader(batch_size=batch_size//2, shuffle=True, pin_memory=True)
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
         # print(batch_imgs.shape, batch_cams.shape, batch_masks.shape, batch_deps.shape, flush=True)
         maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
