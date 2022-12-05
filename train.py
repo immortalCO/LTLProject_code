@@ -458,11 +458,11 @@ class MVSNetMAML(nn.Module):
 
     def forward(self, *args):
         if self.training:
-            features, _, _ = self.mvsnet(*args, prob_only=True)
+            features = self.mvsnet(*args, prob_only=True)[0]
             maml_loss = self.loss_net(features[0]).mean(dim=(-1,-2)).norm(dim=-1).mean()
             return maml_loss
 
-        pred_deps, _, _, _ = self.mvsnet(*args, prob_only=False)
+        pred_deps = self.mvsnet(*args, prob_only=False)[0]
         return pred_deps
 
 def fix_name(name):
