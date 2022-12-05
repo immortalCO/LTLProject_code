@@ -477,3 +477,4 @@ def maml_train_step(mvsnet_orig, episode, alpha=0.02, lr=1e-3):
         var = eval(f"mvsnet_orig.{name}")
         exec(f"mvsnet.{name} = var.clone()")
     
+    return mvsnet
