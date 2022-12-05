@@ -461,8 +461,8 @@ class MVSNetMAML(nn.Module):
 
     def forward(self, *args, training=False):
         if training:
-            with torch.no_grad():
-                features = self.mvsnet(*args, prob_only=True)[-1]
+            # with torch.no_grad():
+            features = self.mvsnet(*args, prob_only=True)[-1]
 
             maml_loss = self.loss_net(features).mean(dim=(-1,-2)).norm(dim=-1).mean()
             return maml_loss
