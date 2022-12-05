@@ -517,7 +517,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
                     {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
 
     mvsnet.eval()
-    test_loader = episode.loader(batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loss = 0
     for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(test_loader):
         if i >= 2:
@@ -554,7 +554,7 @@ def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         opt.step()
 
     mvsnet.eval()
-    test_loader = episode.loader(batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loss = 0
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         count = batch_imgs.shape[0]
