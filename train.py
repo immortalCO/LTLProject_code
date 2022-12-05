@@ -585,7 +585,7 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.
             sch.step()
             logging.info(f"#{epoch} loss = {epoch_loss:.8f}")
 
-        if epoch % 5 == 0:
+        if epoch % 10 == 0:
             valid_loss = 0
             for i, episode in enumerate(valid_episodes):
                 loss = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
