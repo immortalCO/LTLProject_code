@@ -502,9 +502,9 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     test_loss = 0
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         count = batch_imgs.shape[0]
-        pred_deps = mvsnet(batch_imgs, batch_cams)
-        batch_masks = batch_masks[:, 0].cuda()
-        batch_deps = batch_deps[:, 0].cuda()
+        pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
+        batch_masks = batch_masks[:, 0].cuda() 
+        batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
         loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / len(episode)
         loss.backward()
         test_loss += loss.item()
@@ -531,9 +531,9 @@ def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         count = batch_imgs.shape[0]
         with torch.no_grad():
-            pred_deps = mvsnet(batch_imgs, batch_cams)
+            pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
             batch_masks = batch_masks[:, 0].cuda()
-            batch_deps = batch_deps[:, 0].cuda()
+            batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
             loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / len(episode)
             test_loss += loss.item()
 
@@ -555,12 +555,12 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0
             for i, episode in enumerate(episodes):
                 loss = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
                 epoch_loss = epoch_loss + loss
-                logging.info(f"train #{epoch} episode #{i} loss = {loss:.6f}")
+                logging.info(f"#{epoch} episode #{i} loss = {loss:.6f}")
             epoch_loss /= len(episodes)
             
             opt.step()
             sch.step()
-            logging.info(f"train #{epoch} loss = {epoch_loss:.8f}")
+            logging.info(f"#{epoch} loss = {epoch_loss:.8f}")
 
         if epoch % 5 == 0:
             valid_loss = 0
