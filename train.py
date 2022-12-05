@@ -461,8 +461,8 @@ class MVSNetMAML(nn.Module):
 
     def forward(self, *args, training=False):
         if training:
-            # with torch.no_grad():
-            features = self.mvsnet(*args, prob_only=True)[-1]
+            with torch.no_grad():
+                features = self.mvsnet(*args, prob_only=True)[-1]
 
             maml_loss = self.loss_net(features).mean(dim=(-1,-2)).norm(dim=-1).mean()
             return maml_loss
@@ -528,7 +528,7 @@ def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size // 2, shuffle=True, pin_memory=True)
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
-        print(batch_imgs.shape, batch_cams.shape, batch_masks.shape, batch_deps.shape, flush=True)
+        # print(batch_imgs.shape, batch_cams.shape, batch_masks.shape, batch_deps.shape, flush=True)
         maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
         opt.zero_grad()
         maml_loss.backward()
@@ -540,7 +540,7 @@ def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         count = batch_imgs.shape[0]
         with torch.no_grad():
-            print(batch_imgs.shape, batch_cams.shape, batch_masks.shape, batch_deps.shape, flush=True)
+            # print(batch_imgs.shape, batch_cams.shape, batch_masks.shape, batch_deps.shape, flush=True)
             pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
