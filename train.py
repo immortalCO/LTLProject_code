@@ -386,7 +386,7 @@ def read_train_data(SCENE, debug=False):
     
     cam_centers = torch.stack(cam_centers)
     train_cam_centers = cam_centers[train_views]
-    dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(8, dim=1, largest=False)
+    dist, train_pairs = torch.cdist(train_cam_centers, cam_centers).topk(12, dim=1, largest=False)
     
     if debug:
         for i in range(len(train_views)):
@@ -466,7 +466,7 @@ def fix_name(name):
     fixed = re.sub(r"\.(\d{1,})\.", r"[\1].", name)
     return fixed
 
-def maml_train_step(mvsnet_orig, episode, alpha=0.02, lr=1e-3):
+def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02, lr=1e-3):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
 
@@ -476,5 +476,12 @@ def maml_train_step(mvsnet_orig, episode, alpha=0.02, lr=1e-3):
         exec(f"del mvsnet.{name}")
         var = eval(f"mvsnet_orig.{name}")
         exec(f"mvsnet.{name} = var.clone()")
+
+    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
+    for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
+        pred_deps, maml_loss = mvsnet(batch_imgs, batch_cams)
+        maml_loss = maml_loss.mean()
+        maml_loss.backward()
+        break
     
     return mvsnet
