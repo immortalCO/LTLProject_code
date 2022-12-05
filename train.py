@@ -543,6 +543,9 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.5)
 
+    best_valid_loss = 1e9
+    best_valid_ckpt = None
+
     mvsnet.eval()
     for epoch in range(epochs):
         opt.zero_grad()
@@ -566,5 +569,16 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0
                 valid_loss = valid_loss + loss
                 logging.info(f"valid #{epoch} episode #{i} loss = {loss:.6f}")
             valid_loss /= len(valid_episodes)
-            logging.info(f"valid #{epoch} loss = {valid_loss:.8f}")
+
+            updated = ""
+            if valid_loss < best_valid_loss:
+                import copy
+                best_valid_loss = valid_loss
+                best_valid_ckpt = {a : b.cpu() for a, b in mvsnet.state_dict().items()}
+                updated = "updated"
+
+            logging.info(f"valid #{epoch} loss = {valid_loss:.8f} {updated}")
+
+    mvsnet.load_state_dict(best_valid_ckpt)
+    return mvsnet
 
