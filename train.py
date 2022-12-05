@@ -459,6 +459,7 @@ class MVSNetMAML(nn.Module):
     def forward(self, *args):
         if self.training:
             features = self.mvsnet(*args, prob_only=True)[-1]
+            logging.debug(f"features = {features.shape}")
             maml_loss = self.loss_net(features[0]).mean(dim=(-1,-2)).norm(dim=-1).mean()
             return maml_loss
 
