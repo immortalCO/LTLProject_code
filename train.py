@@ -485,7 +485,7 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
 
         locals_dict = {"mvsnet" : mvsnet}
         params = [eval(f"mvsnet.{name}", locals_dict) for name in var_names]
-        grad = torch.autograd.grad(maml_loss, params, create_graph=True)
+        grad = torch.autograd.grad(maml_loss, params, create_graph=True, allow_unused=True)
         for name, g in zip(var_names, grad):
             exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", locals_dict)
 
