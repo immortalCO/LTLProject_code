@@ -460,3 +460,20 @@ class MVSNetMAML(nn.Module):
         pred_deps, conf, features, prob_volume = self.mvsnet(*args)
         maml_loss = self.loss_net(features[0]).mean(dim=(-1,-2)).norm(dim=-1)
         return pred_deps, maml_loss
+
+def fix_name(name):
+    import re
+    fixed = re.sub(r"\.(\d{1,})\.", r"[\1].", name)
+    return fixed
+
+def maml_train_step(mvsnet_orig, episode, alpha=0.02, lr=1e-3):
+    import copy
+    mvsnet = copy.copy(mvsnet_orig)
+
+    var_names = [fix_name(name) for name, _ in mvsnet.named_parameters()]
+
+    for name in var_names:
+        exec(f"del mvsnet.{name}")
+        var = eval(f"mvsnet_orig.{name}")
+        exec(f"mvsnet.{name} = var.clone()")
+    
