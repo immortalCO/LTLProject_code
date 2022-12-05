@@ -327,7 +327,7 @@ class MVSDataset(torch.utils.data.Dataset):
     def loader(self, **kwargs):
         return torch.utils.data.DataLoader(self, **kwargs)
 
-def read_train_data(SCENE, debug=False):
+def read_train_data(SCENE, all_views=False, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
     batch = []
 
@@ -343,6 +343,9 @@ def read_train_data(SCENE, debug=False):
     logging.info(f"cloud shape = {pts.shape}")
 
     train_config = json.load(open(f"{DATASET}/transforms_train.json"))
+
+    if all_views:
+        train_views = list(range(len(train_config['frames'])))
 
     all_data = []
     cam_centers = []
