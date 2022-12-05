@@ -547,20 +547,20 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0
     best_valid_ckpt = None
 
     mvsnet.eval()
-    for epoch in range(1, epochs + 1):
-        opt.zero_grad()
+    for epoch in range(0, epochs + 1):
+        if epoch > 0:
+            opt.zero_grad()
 
-        epoch_loss = 0
-        for i, episode in enumerate(episodes):
-            loss = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
-            epoch_loss = epoch_loss + loss
-            logging.info(f"train #{epoch} episode #{i} loss = {loss:.6f}")
-        epoch_loss /= len(episodes)
-        
-        opt.step()
-        sch.step()
-
-        logging.info(f"train #{epoch} loss = {epoch_loss:.8f}")
+            epoch_loss = 0
+            for i, episode in enumerate(episodes):
+                loss = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
+                epoch_loss = epoch_loss + loss
+                logging.info(f"train #{epoch} episode #{i} loss = {loss:.6f}")
+            epoch_loss /= len(episodes)
+            
+            opt.step()
+            sch.step()
+            logging.info(f"train #{epoch} loss = {epoch_loss:.8f}")
 
         if epoch % 5 == 0:
             valid_loss = 0
