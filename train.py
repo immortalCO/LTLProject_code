@@ -9,7 +9,7 @@ import logging
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 import cv2
-from mvsnet import MVSNet
+from mvsnet import MVSNet, mvsnet_loss
 import os
 import contextlib
 import torchvision
@@ -458,7 +458,7 @@ class MVSNetMAML(nn.Module):
 
     def forward(self, *args):
         pred_deps, conf, features, prob_volume = self.mvsnet(*args)
-        maml_loss = self.loss_net(features[0]).mean(dim=(-1,-2)).norm(dim=-1)
+        maml_loss = self.loss_net(features[0]).mean(dim=(-1,-2)).norm(dim=-1).mean()
         return pred_deps, maml_loss
 
 def fix_name(name):
@@ -466,9 +466,10 @@ def fix_name(name):
     fixed = re.sub(r"\.(\d{1,})\.", r"[\1].", name)
     return fixed
 
-def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02, lr=1e-3):
+def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
+    mvsnet.zero_grad()
 
     var_names = [fix_name(name) for name, _ in mvsnet.named_parameters()]
 
@@ -480,8 +481,40 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02, lr=1e-3):
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
         pred_deps, maml_loss = mvsnet(batch_imgs, batch_cams)
-        maml_loss = maml_loss.mean()
-        maml_loss.backward()
-        break
-    
-    return mvsnet
+        
+        params = [eval(f"mvsnet.{name}") for name in var_names]
+        grad = torch.autograd.grad(maml_loss, params, create_graph=True)
+        for name, g in zip(var_names, grad):
+            exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g")
+
+    test_loader = episode.loader(batch_size=batch_size * 2, shuffle=False, pin_memory=True)
+    test_loss = 0
+    for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
+        count = batch_imgs.shape[0]
+        pred_deps, maml_loss = mvsnet(batch_imgs, batch_cams)
+        test_loss = test_loss + mvsnet_loss(pred_deps, batch_deps, batch_masks) * count
+
+    test_loss = test_loss / len(episode)
+
+    return test_loss
+
+def maml_train(mvsnet, episodes, batch_size=2, lr=0.01, alpha=0.02, epochs=100):
+    opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=25, gamma=0.5)
+
+    for epoch in range(epochs):
+        mvsnet.train()
+        opt.zero_grad()
+
+        epoch_loss = 0
+        for episode in episodes:
+            loss = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
+            loss.backward()
+            epoch_loss = epoch_loss + loss.item()
+        epoch_loss /= len(episodes)
+        
+        opt.step()
+        sch.step()
+
+        logging.info(f"train #{epoch} loss = {epoch_loss:.6f}")
+
