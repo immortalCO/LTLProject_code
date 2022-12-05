@@ -505,7 +505,8 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         count = batch_imgs.shape[0]
         pred_deps = mvsnet(batch_imgs, batch_cams)
-        logging.info(f"{pred_deps.shape}, {batch_deps.shape}, {batch_masks.shape}")
+        batch_masks = batch_masks[:, 0].cuda()
+        batch_deps = batch_deps[:, 0].cuda()
         loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / len(episode)
         loss.backward()
         test_loss += loss.item()
