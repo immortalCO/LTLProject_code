@@ -451,11 +451,9 @@ class MVSNetMAML(nn.Module):
         self.mvsnet = MVSNetPretrained(ckpt)
         self.loss_net = nn.Sequential(
             nn.Conv2d(192, 48, 5, 2, 2),
-            nn.BatchNorm2d(48),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Conv2d(48, 16, 5, 2, 2),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Conv2d(16, 4, 5, 2, 2),
         )
 
