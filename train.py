@@ -548,7 +548,7 @@ def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
 
     return test_loss
 
-def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.05, epochs=1000):
+def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.025, epochs=1000):
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
 
