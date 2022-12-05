@@ -414,7 +414,6 @@ class MVSNetPretrained(nn.Module):
 
         batch_imgs = batch_imgs.float().permute(0, 1, 4, 2, 3).cuda()
         batch_cams = batch_cams.float().cuda()
-        batch_deps = batch_deps[:, 0].cuda()
         dep_vals = torch.arange(192).cuda().unsqueeze(0).repeat(batch_size, 1) / 192
         dep_vals = dep_vals * (DEP_R - DEP_L) + DEP_L
 
@@ -423,7 +422,7 @@ class MVSNetPretrained(nn.Module):
                 batch_size, -1, 3, PRETRAIN_H, PRETRAIN_W)
         
         if prob_only:
-            return self.mvsnet(batch_imgs, batch_cams, dep_vals, batch_deps, prob_only=True)
+            return self.mvsnet(batch_imgs, batch_cams, dep_vals, prob_only=True)
         
         pred_deps, conf, features, prob_volume = self.mvsnet(batch_imgs, batch_cams, dep_vals, prob_only=False)
         pred_deps = 1 - (pred_deps - DEP_L) / (DEP_R - DEP_L)
