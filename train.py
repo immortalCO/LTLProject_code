@@ -488,7 +488,8 @@ def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
         grad = torch.autograd.grad(maml_loss, params, create_graph=True, allow_unused=True)
         for name, g in zip(var_names, grad):
             if g is not None:
-                exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", locals_dict)
+                exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
+                    {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
 
     mvsnet.eval()
     test_loader = episode.loader(batch_size=batch_size * 2, shuffle=False, pin_memory=True)
