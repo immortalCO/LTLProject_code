@@ -333,11 +333,11 @@ def read_train_data(SCENE, all_views=False, debug=False):
 
     DATASET = f"{SCENES_DIR}/{SCENE}/"
     train_config = json.load(open(f"{DATASET}/transforms_train.json"))
-    if all_views:
-        train_views = list(range(len(train_config['frames'])))
-
+    
     train_views = pairs[f"{SCENE}_train"]
     test_views = pairs[f"{SCENE}_test"]
+    if all_views:
+        train_views = list(range(len(train_config['frames'])))
     
     logging.info(f"Read #{SCENE} train_views = {train_views}")  
 
