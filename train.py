@@ -480,11 +480,12 @@ def calc_loss(predict, target, mask, no_psnr=False):
     return loss, psnr
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=8, batch_size=2, num_batches=8, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
     opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=2, gamma=0.5)
 
     episode = episode.sample_subset(batch_size * num_batches)
     episode.train()
@@ -499,6 +500,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
             loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
             loss.backward()
         opt.step()
+        sch.step()
 
     episode.eval()
     mvsnet.eval()
@@ -523,7 +525,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=6, batch_size=2, alpha=0.02):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=8, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
