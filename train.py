@@ -331,7 +331,7 @@ class MVSDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         assert self.mode in [0, 1], "Must be set to train or eval mode."
         (cams, imgs, diff, masks, deps) = self.batches[idx]
-        dep = dep[..., self.mode]
+        deps = deps[..., self.mode]
         return (cams, imgs, diff, masks, deps)
 
     def loader(self, **kwargs):
