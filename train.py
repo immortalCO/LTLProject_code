@@ -516,7 +516,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=12, batch_size=2, num_batche
     for epoch in range(num_epoch):
         opt.zero_grad()
         for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in train_loader:
-            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff).clamp(min=0, max=1)
+            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff.cuda()).clamp(min=0, max=1)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
             loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
@@ -530,7 +530,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=12, batch_size=2, num_batche
     test_psnr = 0
     opt.zero_grad()
     for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in test_loader:
-        pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff).clamp(min=0, max=1)
+        pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff.cuda()).clamp(min=0, max=1)
         batch_masks = batch_masks[:, 0].cuda()
         batch_deps = batch_deps[:, 0].cuda()
         loss, psnr = calc_loss(pred_deps, batch_deps, batch_masks)
@@ -560,7 +560,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=12, batch_size=2, alpha=0.02
     for epoch in range(num_epoch):
         opt.zero_grad()
         for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in train_loader:
-            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff).clamp(min=0, max=1)
+            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff.cuda()).clamp(min=0, max=1)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
             loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
@@ -574,7 +574,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=12, batch_size=2, alpha=0.02
     test_psnr = 0
     for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in test_loader:
         with torch.no_grad():
-            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff).clamp(min=0, max=1)
+            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff.cuda()).clamp(min=0, max=1)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
             loss, psnr = calc_loss(pred_deps, batch_deps, batch_masks)
