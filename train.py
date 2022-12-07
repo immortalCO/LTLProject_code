@@ -330,9 +330,9 @@ class MVSDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         assert self.mode in [0, 1], "Must be set to train or eval mode."
-        proj, img, mask, dep = self.batches[idx]
+        (cams, imgs, diff, masks, deps) = self.batches[idx]
         dep = dep[..., self.mode]
-        return proj, img, mask, dep
+        return (cams, imgs, diff, masks, deps)
 
     def loader(self, **kwargs):
         return torch.utils.data.DataLoader(self, **kwargs)
@@ -352,7 +352,7 @@ def calc_loss(predict, target, mask, no_psnr=False):
         psnr = mse2psnr(se).mean().item()
     return loss, psnr
 
-def read_train_data(SCENE, all_views=False, debug=False):
+def read_train_data(SCENE, mvsnet, all_views=False, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
     batch = []
 
@@ -403,6 +403,7 @@ def read_train_data(SCENE, all_views=False, debug=False):
             rgb[train_pairs[i][1:], 2] = 1
             plot(cam_centers, rgb=rgb, marker='o', size=50)
 
+    mvsnet.eval()
     for train_pair in train_pairs:
         cams = torch.stack([all_data[i][0] for i in train_pair], dim=0)
         imgs = torch.stack([all_data[i][1] for i in train_pair], dim=0)
@@ -412,7 +413,21 @@ def read_train_data(SCENE, all_views=False, debug=False):
         inv_proj = torch.tensor(scipy.linalg.inv(cams[0].numpy()))
         cams = cams @ inv_proj
 
-        batch.append((cams, imgs, masks, deps))
+        with torch.no_grad():
+            batch_cams = cams.unsqueeze(0).cuda()
+            batch_imgs = imgs.unsqueeze(0).cuda()
+            batch_masks = masks.unsqueeze(0).cuda()
+            batch_deps = deps[..., 0].unsqueeze(0).cuda()
+
+            pred_deps = mvsnet(batch_imgs, batch_cams)
+            batch_masks = batch_masks[:, 0].cuda()
+            batch_deps = batch_deps[:, 0].cuda()
+
+            diff = batch_deps - pred_deps
+            diff[~batch_masks] = 0.0
+            diff = diff.squeeze(0).cpu()
+
+        batch.append((cams, imgs, diff, masks, deps))
 
     logging.info("#batch = %d" % len(batch))
     return MVSDataset(batch)
@@ -487,12 +502,12 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, num_batches=8, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=12, batch_size=2, num_batches=8, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
     opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=4, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=3, gamma=0.5)
 
     episode = episode.sample_subset(batch_size * num_batches)
     episode.train()
@@ -500,8 +515,8 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, num_batche
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
         opt.zero_grad()
-        for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
-            pred_deps = mvsnet(batch_imgs, batch_cams)
+        for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in train_loader:
+            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff).clamp(min=0, max=1)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
             loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
@@ -514,8 +529,8 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, num_batche
     test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_psnr = 0
     opt.zero_grad()
-    for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
-        pred_deps = mvsnet(batch_imgs, batch_cams)
+    for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in test_loader:
+        pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff).clamp(min=0, max=1)
         batch_masks = batch_masks[:, 0].cuda()
         batch_deps = batch_deps[:, 0].cuda()
         loss, psnr = calc_loss(pred_deps, batch_deps, batch_masks)
@@ -532,20 +547,20 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, num_batche
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, alpha=0.02):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=12, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
     opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=4, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=3, gamma=0.5)
 
     episode.train()
     mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
         opt.zero_grad()
-        for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
-            pred_deps = mvsnet(batch_imgs, batch_cams)
+        for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in train_loader:
+            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff).clamp(min=0, max=1)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
             loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
@@ -557,9 +572,9 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, alpha=0.02
     mvsnet.eval()
     test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_psnr = 0
-    for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
+    for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in test_loader:
         with torch.no_grad():
-            pred_deps = mvsnet(batch_imgs, batch_cams)
+            pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff).clamp(min=0, max=1)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
             loss, psnr = calc_loss(pred_deps, batch_deps, batch_masks)
