@@ -582,11 +582,11 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0
             random.shuffle(episodes)
            
             epoch_psnr = 0
+            opt.zero_grad()
             for i, episode in enumerate(episodes):
-                opt.zero_grad()
                 psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
                 epoch_psnr = epoch_psnr + psnr
-                opt.step()
+            opt.step()
             sch.step()
             epoch_psnr /= len(episodes)            
             logging.info(f"#{epoch} psnr = {epoch_psnr:.8f}")
