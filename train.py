@@ -317,18 +317,29 @@ def read_data_ns(DATASET, config, i, debug=False):
 class MVSDataset(torch.utils.data.Dataset):
     def __init__(self, batches):
         self.batches = batches
-        self.mode = 0
+        self.mode = -1
     
     def __len__(self):
         return len(self.batches)
 
+    def train(self):
+        self.mode = 0
+    
+    def eval(self):
+        self.mode = 1
+
     def __getitem__(self, idx):
+        assert self.mode in [0, 1], "Must be set to train or eval mode."
         proj, img, mask, dep = self.batches[idx]
         dep = dep[..., self.mode]
         return proj, img, mask, dep
 
     def loader(self, **kwargs):
         return torch.utils.data.DataLoader(self, **kwargs)
+
+    def sample_subset(self, n):
+        import random
+        return MVSDataset(random.sample(self.batches, n))
 
 def read_train_data(SCENE, all_views=False, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
@@ -455,66 +466,71 @@ def fix_name(name):
     fixed = re.sub(r"\.(\d{1,})\.", r"[\1].", name)
     return fixed
 
-def maml_train_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=4, batch_size=2, num_batches=8, alpha=0.02):
     import copy
-    
-    var_names = [fix_name(name) for name, _ in mvsnet_orig.named_parameters()]
-
-    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
-    batches = [batch for batch in train_loader]
-    n = len(batches)
-    train_batches = batches[:n // 2]
-    valid_batches = batches[n // 2:]
-
-    test_loss = 0
-    count_all = sum(batch[0].shape[0] for batch in valid_batches)
-
-   
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
-    for name in var_names:
-        exec(f"del mvsnet.{name}")
-        var = eval(f"mvsnet_orig.{name}")
-        exec(f"mvsnet.{name} = var.clone()")
+    opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
+
+    episode = episode.sample_subset(batch_size * num_batches)
+    episode.train()
     mvsnet.eval()
+    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
+    for epoch in range(num_epoch):
+        for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
+            pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
+            batch_masks = batch_masks[:, 0].cuda()
+            batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
+            loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks])
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
 
-    for j, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(train_batches):
-        maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
-
-        params = [eval(f"mvsnet.{name}", {"mvsnet" : mvsnet}) for name in var_names]
-        grad = torch.autograd.grad(maml_loss, params, create_graph=True, retain_graph=False, allow_unused=True)
-        for name, g in zip(var_names, grad):
-            if g is not None:
-                exec(f"mvsnet.{name} = mvsnet.{name} - alpha * g", 
-                    {"mvsnet" : mvsnet, "alpha" : alpha, "g" : g})
-    
-    for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(valid_batches):
+    episode.eval()
+    mvsnet.eval()
+    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
+    test_loss = 0
+    opt.zero_grad()
+    for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         count = batch_imgs.shape[0]
         pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
-        batch_masks = batch_masks[:, 0].cuda() 
+        batch_masks = batch_masks[:, 0].cuda()
         batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
-        loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / count_all
-        loss.backward()
+        loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks]) * count / len(episode)
         test_loss += loss.item()
+        loss.backward()
+
+    for param_orig, param in zip(mvsnet_orig.parameters(), mvsnet.parameters()):
+        with torch.no_grad():
+            if param_orig.grad is None:
+                param_orig.grad = param.grad
+            else:
+                param_orig.grad += param.grad
 
     return test_loss
 
-def maml_valid_step(mvsnet_orig, episode, batch_size=2, alpha=0.02):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=4, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
-    opt = torch.optim.SGD(mvsnet.parameters(), lr=alpha)
+    opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
 
+    episode.train()
     mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
-    for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
-        maml_loss = mvsnet(batch_imgs, batch_cams, training=True)
-        opt.zero_grad()
-        maml_loss.backward()
-        opt.step()
+    for epoch in range(num_epoch):
+        for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
+            pred_deps = mvsnet(batch_imgs, batch_cams) * (DEP_R - DEP_L)
+            batch_masks = batch_masks[:, 0].cuda()
+            batch_deps = batch_deps[:, 0].cuda() * (DEP_R - DEP_L)
+            loss = F.smooth_l1_loss(pred_deps[batch_masks], batch_deps[batch_masks])
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
 
+    episode.eval()
     mvsnet.eval()
-    test_loader = episode.loader(batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loss = 0
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         count = batch_imgs.shape[0]
@@ -543,8 +559,11 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.
             for i, episode in enumerate(episodes):
                 loss = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
                 epoch_loss = epoch_loss + loss
-                # logging.info(f"#{epoch} episode #{i} loss = {loss:.6f}")
+
             epoch_loss /= len(episodes)
+            for param in mvsnet.parameters():
+                if param.grad is not None:
+                    param.grad /= len(episodes)
             
             opt.step()
             sch.step()
