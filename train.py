@@ -487,26 +487,26 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=15, batch_size=2, num_batches=8, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=20, batch_size=2, num_batches=8, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
     opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=3, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=4, gamma=0.5)
 
     episode = episode.sample_subset(batch_size * num_batches)
     episode.train()
-    mvsnet.train()
+    mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
-        opt.zero_grad()
         for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
+            opt.zero_grad()
             pred_deps = mvsnet(batch_imgs, batch_cams)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
             loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
             loss.backward()
-        opt.step()
+            opt.step()
         sch.step()
 
     episode.eval()
@@ -532,25 +532,25 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=15, batch_size=2, num_batche
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=15, batch_size=2, alpha=0.02):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=20, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
     opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=3, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=4, gamma=0.5)
 
     episode.train()
-    mvsnet.train()
+    mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
-        opt.zero_grad()
         for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
+            opt.zero_grad()
             pred_deps = mvsnet(batch_imgs, batch_cams)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
             loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
             loss.backward()
-        opt.step()
+            opt.step()
         sch.step()
 
     episode.eval()
@@ -568,7 +568,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=15, batch_size=2, alpha=0.02
 
     return test_psnr
 
-def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0.01, epochs=200):
+def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.0025, alpha=0.005, epochs=200):
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
 
@@ -578,20 +578,17 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0
     mvsnet.eval()
     for epoch in range(0, epochs + 1):
         if epoch > 0:
-            opt.zero_grad()
-
+            import random
+            random.shuffle(episodes)
+           
             epoch_psnr = 0
             for i, episode in enumerate(episodes):
+                opt.zero_grad()
                 psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
                 epoch_psnr = epoch_psnr + psnr
-
-            epoch_psnr /= len(episodes)
-            for param in mvsnet.parameters():
-                if param.grad is not None:
-                    param.grad /= len(episodes)
-            
-            opt.step()
+                opt.step()
             sch.step()
+            epoch_psnr /= len(episodes)            
             logging.info(f"#{epoch} psnr = {epoch_psnr:.8f}")
 
         if epoch % 10 == 0:
