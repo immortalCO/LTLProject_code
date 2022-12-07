@@ -356,12 +356,7 @@ def read_train_data(SCENE, all_views=False, debug=False):
         train_views = list(range(len(train_config['frames'])))
 
     
-    logging.info(f"Read #{SCENE} train_views = {train_views}")  
-
-    pts = torch.load(f"{DATASET}/cloud_ref.pth")
-    # plot(pts)
-    logging.info(f"cloud shape = {pts.shape}")
-
+    logging.info(f"Read #{SCENE} #train_views = {len(train_views)}")  
 
     all_data = []
     cam_centers = []
@@ -559,9 +554,9 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=4, batch_size=2, alpha=0.02)
 
     return test_psnr
 
-def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.025, epochs=1000):
+def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.01, epochs=500):
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.75)
 
     best_valid_psnr = -1
     best_valid_ckpt = None
