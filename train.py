@@ -487,12 +487,12 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, num_batches=8, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=15, batch_size=2, num_batches=8, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
     opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=4, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=3, gamma=0.5)
 
     episode = episode.sample_subset(batch_size * num_batches)
     episode.train()
@@ -532,12 +532,12 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, num_batche
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=16, batch_size=2, alpha=0.02):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=15, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
     opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=4, gamma=0.5)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=3, gamma=0.5)
 
     episode.train()
     mvsnet.eval()
