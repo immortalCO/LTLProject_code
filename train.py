@@ -480,7 +480,7 @@ def calc_loss(predict, target, mask, no_psnr=False):
     return loss, psnr
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=4, batch_size=2, num_batches=8, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=2, batch_size=2, num_batches=8, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
@@ -523,7 +523,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=4, batch_size=2, num_batches
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=4, batch_size=2, alpha=0.02):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=2, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
