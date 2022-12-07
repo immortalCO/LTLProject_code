@@ -578,6 +578,8 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.0025, alpha=
     mvsnet.eval()
     for epoch in range(0, epochs + 1):
         if epoch > 0:
+            import random
+            random.shuffle(episodes)
            
             epoch_psnr = 0
             for i, episode in enumerate(episodes):
