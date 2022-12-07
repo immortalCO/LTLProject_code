@@ -480,7 +480,7 @@ def calc_loss(predict, target, mask, no_psnr=False):
     return loss, psnr
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=2, batch_size=2, num_batches=8, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
@@ -491,14 +491,14 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=2, batch_size=2, num_batches
     mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
+        opt.zero_grad()
         for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
             pred_deps = mvsnet(batch_imgs, batch_cams)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
-            loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)
-            opt.zero_grad()
+            loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
             loss.backward()
-            opt.step()
+        opt.step()
 
     episode.eval()
     mvsnet.eval()
@@ -523,7 +523,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=2, batch_size=2, num_batches
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=2, batch_size=2, alpha=0.02):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=4, batch_size=2, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
@@ -533,14 +533,14 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=2, batch_size=2, alpha=0.02)
     mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
+        opt.zero_grad()
         for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
             pred_deps = mvsnet(batch_imgs, batch_cams)
             batch_masks = batch_masks[:, 0].cuda()
             batch_deps = batch_deps[:, 0].cuda()
-            loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)
-            opt.zero_grad()
+            loss = calc_loss(pred_deps, batch_deps, batch_masks, no_psnr=True)    
             loss.backward()
-            opt.step()
+        opt.step()
 
     episode.eval()
     mvsnet.eval()
@@ -602,4 +602,3 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.01, alpha=0.
 
     mvsnet.load_state_dict(best_valid_ckpt)
     return mvsnet
-
