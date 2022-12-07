@@ -410,7 +410,7 @@ class MVSNetPretrained(nn.Module):
         super().__init__()
         self.mvsnet = load_mvsnet(ckpt)
 
-    def forward(self, batch_imgs, batch_cams, prob_only=False):
+    def forward(self, batch_imgs, batch_cams, simple_output=True, prob_only=False):
         batch_size = batch_imgs.shape[0]
 
         batch_imgs = batch_imgs.float().permute(0, 1, 4, 2, 3).cuda()
@@ -429,6 +429,9 @@ class MVSNetPretrained(nn.Module):
         pred_deps = 1 - (pred_deps - DEP_L) / (DEP_R - DEP_L)
 
         pred_deps = torchvision.transforms.Resize([IMG_H, IMG_W])(pred_deps) 
+
+        if simple_output:
+            return pred_deps
         return pred_deps, conf, features, prob_volume
         
 
