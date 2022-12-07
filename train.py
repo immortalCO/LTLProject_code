@@ -469,7 +469,7 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
 
 def calc_loss(predict, target, mask, no_psnr=False):
-    se = (predict - target).mul(DEP_R - DEP_L).pow(2) * mask
+    se = (predict - target).mul(DEP_R - DEP_L).add(DEP_L).pow(2) * mask
     se = se.sum(dim=(-1,-2)) / mask.sum(dim=(-1,-2)).clamp(min=1)
     loss = se.mean()
     if no_psnr:
