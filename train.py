@@ -341,6 +341,17 @@ class MVSDataset(torch.utils.data.Dataset):
         import random
         return MVSDataset(random.sample(self.batches, n))
 
+def calc_loss(predict, target, mask, no_psnr=False):
+    se = (predict - target).pow(2) * mask
+    se = se.sum(dim=(-1,-2)) / mask.sum(dim=(-1,-2)).clamp(min=1)
+    loss = se.mean()
+    if no_psnr:
+        return loss
+    
+    with torch.no_grad():
+        psnr = mse2psnr(se).mean().item()
+    return loss, psnr
+
 def read_train_data(SCENE, all_views=False, debug=False):
     pairs = torch.load(f"{SCENES_DIR}/mvsnerf_pairs.pth")
     batch = []
@@ -361,6 +372,8 @@ def read_train_data(SCENE, all_views=False, debug=False):
     all_data = []
     cam_centers = []
 
+    dep_psnr = 0.0
+
     for i in tqdm(range(len(train_config['frames']))):
         cam, proj, img, mask = read_data_ns(DATASET, train_config, i)
         
@@ -369,7 +382,12 @@ def read_train_data(SCENE, all_views=False, debug=False):
         dep = torch.stack([dep_coa[i][..., 0], dep_fin[i][..., 0]], dim=-1)
         dep[~mask] = 0.0
 
+        dep_psnr += calc_loss(dep[..., 0], dep[..., 1], mask)[1]
+
         all_data.append((proj, img, mask, dep))    
+
+    dep_psnr /= len(train_config['frames'])
+    logging.info(f"Depth PSNR = {dep_psnr}")
 
     
     cam_centers = torch.stack(cam_centers)
@@ -467,17 +485,6 @@ def fix_name(name):
 
 def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
-
-def calc_loss(predict, target, mask, no_psnr=False):
-    se = (predict - target).pow(2) * mask
-    se = se.sum(dim=(-1,-2)) / mask.sum(dim=(-1,-2)).clamp(min=1)
-    loss = se.mean()
-    if no_psnr:
-        return loss
-    
-    with torch.no_grad():
-        psnr = mse2psnr(se).mean().item()
-    return loss, psnr
     
 
 def maml_train_step(mvsnet_orig, episode, num_epoch=8, batch_size=2, num_batches=8, alpha=0.02):
