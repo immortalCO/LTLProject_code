@@ -367,7 +367,7 @@ def read_train_data(SCENE, all_views=False, debug=False):
         cam_centers.append(cam[2])
 
         dep = torch.stack([dep_coa[i][..., 0], dep_fin[i][..., 0]], dim=-1)
-        dep[mask] = 0.0
+        dep[~mask] = 0.0
 
         all_data.append((proj, img, mask, dep))    
 
