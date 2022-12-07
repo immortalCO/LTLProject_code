@@ -387,7 +387,7 @@ def read_train_data(SCENE, all_views=False, debug=False):
         all_data.append((proj, img, mask, dep))    
 
     dep_psnr /= len(train_config['frames'])
-    logging.info(f"Depth PSNR = {dep_psnr}")
+    logging.info(f"Depth PSNR = {dep_psnr:.6f}")
 
     
     cam_centers = torch.stack(cam_centers)
