@@ -15,8 +15,8 @@ import contextlib
 import torchvision
 
 SCENES_DIR = "./datasets/NerfSyn/"
-TRAIN_SCENES = ["chair", "ficus", "materials", "mic"]
-TEST_SCENES = ["drums", "hotdog", "lego", "ship"]
+TRAIN_SCENES = ["chair", "ficus", "materials"]
+TEST_SCENES = ["drums", "hotdog", "lego",  "mic", "ship"]
 
 DEFAULT_VIEW_DIR = [-1., -1., -1.]
 BG_COLOR = [1, 1, 1]
