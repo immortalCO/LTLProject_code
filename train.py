@@ -317,12 +317,15 @@ def read_data_ns(DATASET, config, i, debug=False):
 class MVSDataset(torch.utils.data.Dataset):
     def __init__(self, batches):
         self.batches = batches
+        self.mode = 0
     
     def __len__(self):
         return len(self.batches)
 
     def __getitem__(self, idx):
-        return self.batches[idx]
+        proj, img, mask, dep = self.batches[idx]
+        dep = dep[..., self.mode]
+        return proj, img, mask, dep
 
     def loader(self, **kwargs):
         return torch.utils.data.DataLoader(self, **kwargs)
@@ -333,6 +336,8 @@ def read_train_data(SCENE, all_views=False, debug=False):
 
     DATASET = f"{SCENES_DIR}/{SCENE}/"
     train_config = json.load(open(f"{DATASET}/transforms_train.json"))
+    dep_coa = torch.load(f'{SCENES_DIR}/depth_maps/depth_map_{SCENE}_coarse.pth')
+    dep_fin = torch.load(f'{SCENES_DIR}/depth_maps/depth_map_{SCENE}_fine.pth')
     
     train_views = pairs[f"{SCENE}_train"]
     test_views = pairs[f"{SCENE}_test"]
@@ -355,34 +360,8 @@ def read_train_data(SCENE, all_views=False, debug=False):
         
         cam_centers.append(cam[2])
 
-        W, H, _ = img.shape
-        pix = pts2pix_ns(cam, pts)
-        pix = pix.long()
-
-        inliers = (pix[:, 0] >= 0) & (pix[:, 1] >= 0) & (pix[:, 0] < H) & (pix[:, 1] < W)
-        pix = pix[inliers]
-
-        pix_ind = pix[:, 0] * W + pix[:, 1]
-        # pts_proj = pix2pts_ns(cam, pix_ind)
-        dep = ((pts[inliers] - cam[2]).norm(dim=1) - DEP_L) / (DEP_R - DEP_L)
-        pix_dep = torch.ones(W * H, dtype=torch.float) * 10
-        
-        # prevent scatter_reduce from printing
-        with open(os.devnull, "w") as f, contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):           
-            pix_dep.scatter_reduce_(0, pix_ind, dep, reduce="amin")
-
-        pix_dep = pix_dep.reshape(W, H)
-
-        holes = (pix_dep > 2) & mask
-        pix_dep = torch.from_numpy(cv2.inpaint(pix_dep.clamp(0, 1).numpy(), holes.numpy().astype(np.uint8), 3, cv2.INPAINT_TELEA)).float()
-        pix_dep = torch.from_numpy(cv2.medianBlur(pix_dep.clamp(0, 1).numpy(), 5)).float()
-
-        pix_dep[~mask] = 1
-        dep = 1 - pix_dep.clamp(min=0, max=1)
-
-        if debug:
-            # show(img)
-            show(1 - dep.clamp(0, 1))
+        dep = torch.stack([dep_coa[i][..., 0], dep_fin[i][..., 0]], dim=-1)
+        dep[mask] = 0.0
 
         all_data.append((proj, img, mask, dep))    
 
