@@ -587,7 +587,8 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.005, alpha=0
                 psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
                 epoch_psnr = epoch_psnr + psnr
             for param in mvsnet.parameters():
-                param.grad /= len(episodes)
+                if param.grad is not None:
+                    param.grad /= len(episodes)
             opt.step()
             sch.step()
             epoch_psnr /= len(episodes)            
