@@ -529,7 +529,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=12, batch_size=2, num_batche
     test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_psnr = 0
     opt.zero_grad()
-    for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in test_loader:
+    for (batch_cams, batch_imgs, batch_diff, batch_masks, batch_deps) in tqdm(test_loader):
         pred_deps = mvsnet(batch_imgs, batch_cams).add(batch_diff.cuda()).clamp(min=0, max=1)
         batch_masks = batch_masks[:, 0].cuda()
         batch_deps = batch_deps[:, 0].cuda()
