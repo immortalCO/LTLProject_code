@@ -487,7 +487,7 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.05):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
@@ -533,7 +533,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=30, batch_size=2, alpha=0.02):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=30, batch_size=2, alpha=0.002):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
@@ -570,7 +570,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=30, batch_size=2, alpha=0.02
 
     return test_psnr
 
-def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.002, alpha=0.002, epoch_fact=50):
+def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.002, epoch_fact=50):
     epochs = epoch_fact * 10
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=epoch_fact, gamma=0.75)
@@ -584,7 +584,7 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.002, alpha=0
             epoch_psnr = 0
             opt.zero_grad()
             for i, episode in enumerate(episodes):
-                psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
+                psnr = maml_train_step(mvsnet, episode, batch_size=batch_size)
                 epoch_psnr = epoch_psnr + psnr
             for param in mvsnet.parameters():
                 if param.grad is not None:
@@ -597,7 +597,7 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.002, alpha=0
         if epoch % (epoch_fact // 2) == 0:
             valid_psnr = 0
             for i, episode in enumerate(valid_episodes):
-                psnr = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
+                psnr = maml_valid_step(mvsnet, episode, batch_size=batch_size)
                 valid_psnr = valid_psnr + psnr
                 logging.info(f"valid #{epoch} episode #{i} psnr = {psnr:.6f}")
             valid_psnr /= len(valid_episodes)
