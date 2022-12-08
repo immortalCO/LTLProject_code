@@ -497,7 +497,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     episode = episode.sample_subset(batch_size * num_batches)
     episode.train()
     mvsnet.eval()
-    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
+    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
         opt.zero_grad()
         for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
@@ -512,7 +512,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
 
     episode.eval()
     mvsnet.eval()
-    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
+    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_psnr = 0
     opt.zero_grad()
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
@@ -542,7 +542,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
 
     episode.train()
     mvsnet.eval()
-    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
+    train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
         opt.zero_grad()
         for (batch_cams, batch_imgs, batch_masks, batch_deps) in train_loader:
@@ -557,7 +557,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
 
     episode.eval()
     mvsnet.eval()
-    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
+    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_psnr = 0
     for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
         with torch.no_grad():
