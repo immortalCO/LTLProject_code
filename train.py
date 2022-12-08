@@ -487,7 +487,7 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.05):
+def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
