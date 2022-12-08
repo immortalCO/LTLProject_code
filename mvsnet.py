@@ -67,6 +67,7 @@ class CostRegNet(nn.Module):
         x = conv4 + self.conv7(x)
         x = conv2 + self.conv9(x)
         x = conv0 + self.conv11(x)
+        self.pre_prob_feature = x
         x = self.prob(x)
         return x
 
@@ -132,7 +133,7 @@ class MVSNet(nn.Module):
         cost_reg = cost_reg.squeeze(1)
         prob_volume = F.softmax(cost_reg, dim=1)
         if prob_only:
-            return features, prob_volume, cost_reg
+            return features, prob_volume, cost_reg, self.cost_regularization.pre_prob_feature
         # logging.debug(f"prob_volume: {prob_volume.shape}")
         depth = depth_regression(prob_volume, depth_values=depth_values)
 
