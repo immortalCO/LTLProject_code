@@ -592,7 +592,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     episode.train()
     mvsnet.eval()
     train_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
-    for epoch in range(num_epoch):
+    for epoch in range(num_epoch) if not plot else tqdm(range(num_epoch)):
         opt.zero_grad()
         for (batch_cams, batch_imgs, _, _) in train_loader:
             loss = mvsnet(batch_imgs, batch_cams, training=True)
