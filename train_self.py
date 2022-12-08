@@ -615,12 +615,13 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
             test_psnr += psnr * batch_imgs.shape[0] / len(episode)
 
             if plot:
-                ref = episode.batches[i][-1][..., 0][:, 0].cuda()
-                pred_deps[~batch_masks] = 0
-                batch_deps[~batch_masks] = 0
-                ref[~batch_masks[:, 0]] = 0
                 out = pred_deps[0]
                 ans = batch_deps[0]
+                ref = episode.batches[i][-1][..., 0][:, 0].cuda()
+                mask = batch_masks[0]
+                out[~mask] = 0
+                ans[~mask] = 0
+                ref[~mask] = 0
                 logging.debug("====================================")
                 logging.debug(f"#{i}")
                 logging.debug("out:")
@@ -629,9 +630,9 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
                 show(ans)
                 logging.debug("ref:")
                 show(ref)
-                logging.debug("diff out ans:")
+                logging.debug(f"diff out ans, psnr = {calc_loss(out, ans, mask)[-1]:.4f}):")
                 show((out - ans).abs())
-                logging.debug("diff ref ans:")
+                logging.debug(f"diff ref ans, psnr = {calc_loss(ref, ans, mask)[-1]:.4f}):")
                 show((ref - ans).abs())
                 logging.debug("====================================")
 
