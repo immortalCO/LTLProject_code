@@ -487,7 +487,7 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=10, batch_size=2, num_batches=8, alpha=0.02):
+def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.02):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
@@ -570,9 +570,10 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=30, batch_size=2, alpha=0.02
 
     return test_psnr
 
-def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.002, alpha=0.002, epochs=200):
+def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.002, alpha=0.002, epoch_fact=50):
+    epochs = epoch_fact * 10
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
-    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
+    sch = torch.optim.lr_scheduler.StepLR(opt, step_size=epoch_fact, gamma=0.75)
 
     best_valid_psnr = -1
     best_valid_ckpt = None
@@ -593,7 +594,7 @@ def maml_train(mvsnet, episodes, valid_episodes, batch_size=2, lr=0.002, alpha=0
             epoch_psnr /= len(episodes)            
             logging.info(f"#{epoch} psnr = {epoch_psnr:.8f}")
 
-        if epoch % 10 == 0:
+        if epoch % (epoch_fact // 2) == 0:
             valid_psnr = 0
             for i, episode in enumerate(valid_episodes):
                 psnr = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
