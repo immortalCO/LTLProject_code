@@ -533,9 +533,9 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
 
     episode.eval()
     mvsnet.eval()
-    test_loader = episode.loader(batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loader = episode.loader(batch_size=batch_size if not plot else 1, shuffle=False, pin_memory=True)
     test_psnr = 0
-    for (batch_cams, batch_imgs, batch_masks, batch_deps) in test_loader:
+    for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(test_loader):
         with torch.no_grad():
             pred_deps = mvsnet(batch_imgs, batch_cams)
             batch_masks = batch_masks[:, 0].cuda()
@@ -545,15 +545,25 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
             test_psnr += psnr * batch_imgs.shape[0] / len(episode)
 
             if plot:
+                ref = episode.batches[i][-1][..., 0][:, 0].cuda()
                 pred_deps[~batch_masks] = 0
                 batch_deps[~batch_masks] = 0
-                for out, ans in zip(pred_deps, batch_deps):
-                    logging.debug("out:")
-                    show(out)
-                    logging.debug("ans:")
-                    show(ans)
-                    logging.debug("diff:")
-                    show((out - ans).abs())
+                ref[~batch_masks[:, 0]] = 0
+                out = pred_deps[0]
+                ans = batch_deps[0]
+                logging.debug("====================================")
+                logging.debug(f"#{i}")
+                logging.debug("out:")
+                show(out)
+                logging.debug("ans:")
+                show(ans)
+                logging.debug("ref:")
+                show(ref)
+                logging.debug("diff out ans:")
+                show((out - ans).abs())
+                logging.debug("diff ref ans:")
+                show((ref - ans).abs())
+                logging.debug("====================================")
 
     return test_psnr
 
