@@ -512,6 +512,8 @@ def maml_init_train_step(mvsnet_orig, episode):
 
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
+    for param in mvsnet.loss_net.parameters():
+        param.requires_grad = False
     episode.eval()
     mvsnet.eval()
 
