@@ -741,16 +741,12 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
 def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, 
         batch_size=2, lr=0.001, alpha=0.001, epoch_fact=100, init=False):
     assert isinstance(mvsnet, MVSNetSelfSup), "Should be self-supervised MVSNet"
-    epochs = epoch_fact * 10
+    epochs = epoch_fact * 5
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=epoch_fact, gamma=0.75)
 
     best_valid_psnr = -1
     best_valid_ckpt = None
-
-    if init:
-        epochs = epoch_fact
-        epoch_fact *= 4
 
     mvsnet.eval()
     for epoch in range(1, epochs + 1):
@@ -771,7 +767,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
             epoch_psnr /= len(episodes)            
             logging.info(f"#{epoch} psnr = {epoch_psnr:.8f}")
 
-        if epoch % (epoch_fact // 4) == 0:
+        if epoch % ((epoch_fact // 4) if not init else epoch_fact) == 0:
             valid_psnr = 0
             for i, episode in enumerate(valid_episodes):
                 psnr = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
