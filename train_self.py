@@ -32,6 +32,14 @@ import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 128
 mpl.rcParams['savefig.pad_inches'] = 0
 
+def ssim(x, y):
+    if isinstance(x, torch.Tensor):
+        x = x.cpu().numpy()
+    if isinstance(y, torch.Tensor):
+        y = y.cpu().numpy()
+    from skimage.metrics import structural_similarity as ssim
+    return ssim(x, y, win_size=11, multichannel=True)
+
 def show(img, save=None):
     # img = img.astype(np.int)
     fig = plt.figure()
@@ -373,6 +381,7 @@ def read_train_data(SCENE, all_views=False, debug=False):
     cam_centers = []
 
     dep_psnr = 0.0
+    dep_ssim = 0.0
 
     for i in tqdm(range(len(train_config['frames']))):
         cam, proj, img, mask = read_data_ns(DATASET, train_config, i)
@@ -383,11 +392,13 @@ def read_train_data(SCENE, all_views=False, debug=False):
         dep[~mask] = 0.0
 
         dep_psnr += calc_loss(dep[..., 0], dep[..., 1], mask)[1]
+        dep_ssim += ssim(dep[..., 0].cpu.numpy(), dep[..., 1].cpu.numpy()).item()
 
         all_data.append((proj, img, mask, dep))    
 
     dep_psnr /= len(train_config['frames'])
-    logging.info(f"Depth PSNR = {dep_psnr:.6f}")
+    dep_ssim /= len(train_config['frames'])
+    logging.info(f"Depth psnr = {dep_psnr:.6f} ssim = {dep_ssim:.6f}")
 
     
     cam_centers = torch.stack(cam_centers)
@@ -605,6 +616,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     mvsnet.eval()
     test_loader = episode.loader(batch_size=batch_size if not plot else 1, shuffle=False, pin_memory=True)
     test_psnr = 0
+    test_ssim = 0
     for i, (batch_cams, batch_imgs, batch_masks, batch_deps) in enumerate(test_loader):
         with torch.no_grad():
             pred_deps = mvsnet(batch_imgs, batch_cams)
@@ -619,6 +631,9 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
                 ans = batch_deps[0]
                 ref = episode.batches[i][-1][0, ..., 0].cuda()
                 mask = batch_masks[0]
+                ssim_out = ssim(out.cpu().numpy(), ans.cpu().numpy())
+                ssim_ref = ssim(ref.cpu().numpy(), ans.cpu().numpy())
+                test_ssim += ssim_out / len(episode)
                 out[~mask] = 0
                 ans[~mask] = 0
                 ref[~mask] = 0
@@ -630,11 +645,14 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
                 show(ans)
                 logging.debug("ref:")
                 show(ref)
-                logging.debug(f"diff out ans, psnr = {calc_loss(out, ans, mask)[-1]:.4f}):")
+                logging.debug(f"diff out ans, psnr = {calc_loss(out, ans, mask)[-1]:.4f} ssim = {ssim_out:.4f}")
                 show((out - ans).abs())
-                logging.debug(f"diff ref ans, psnr = {calc_loss(ref, ans, mask)[-1]:.4f}):")
+                logging.debug(f"diff ref ans, psnr = {calc_loss(ref, ans, mask)[-1]:.4f} ssim = {ssim_ref:.4f}")
                 show((ref - ans).abs())
                 logging.debug("====================================")
+
+    if plot:
+        logging.info(f"valid done psnr = {test_psnr:.4f} ssim = {test_ssim:.4f}")
 
     return test_psnr
 
