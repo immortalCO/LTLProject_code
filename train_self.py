@@ -504,7 +504,9 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002):
+def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002, alpha2=None):
+    if alpha2 is None:
+        alpha2 = alpha
     assert num_epoch == 1, "num_epoch must be 1"
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
@@ -569,7 +571,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     mvsnet.eval()
     mvsnet.zero_grad()
 
-    grad_passing_raw = [(grad * -alpha) if grad is not None else None for grad in grad_updated_param]
+    grad_passing_raw = [(grad * -alpha2) if grad is not None else None for grad in grad_updated_param]
     del grad_updated_param
     train_loader = episode.loader(batch_size=max(1, batch_size // 2), shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
@@ -671,7 +673,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     return test_psnr
 
 def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, 
-        batch_size=2, lr=0.001, alpha=0.001, epoch_fact=100):
+        batch_size=2, lr=0.001, alpha=0.002, alpha2=0.01, epoch_fact=100):
     assert isinstance(mvsnet, MVSNetSelfSup), "Should be self-supervised MVSNet"
     epochs = epoch_fact * 10
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
@@ -686,7 +688,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
             epoch_psnr = 0
             opt.zero_grad()
             for i, episode in enumerate(episodes):
-                psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
+                psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha, alpha2=alpha2)
                 epoch_psnr = epoch_psnr + psnr
             for param in mvsnet.parameters():
                 if param.grad is not None:
