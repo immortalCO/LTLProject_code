@@ -511,7 +511,7 @@ def maml_init_train_step(mvsnet_orig, episode, num_iter=4):
 
     test_psnr = 0
 
-    for iter in range(num_iter):
+    for _ in range(num_iter):
         episode = episode.sample_subset(batch_size * num_batches)
 
         mvsnet = copy.deepcopy(mvsnet_orig)
