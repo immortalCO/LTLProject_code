@@ -504,75 +504,76 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_init_train_step(mvsnet_orig, episode):
+def maml_init_train_step(mvsnet_orig, episode, num_iter=4):
     num_epoch = batch_size = num_batches = 1
     assert num_epoch == 1, "num_epoch must be 1"
     import copy
-    episode = episode.sample_subset(batch_size * num_batches)
 
-    mvsnet = copy.deepcopy(mvsnet_orig)
-    mvsnet.zero_grad()
-    for param in mvsnet.loss_net.parameters():
-        param.requires_grad = False
-    episode.eval()
-    mvsnet.eval()
+    for iter in num_iter:
+        episode = episode.sample_subset(batch_size * num_batches)
 
-    test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
-    test_psnr = 0
-    (batch_cams, batch_imgs, batch_masks, batch_deps) = next(iter(test_loader))
-    pred_deps = mvsnet(batch_imgs, batch_cams)
-    batch_masks = batch_masks[:, 0].cuda()
-    batch_deps = batch_deps[:, 0].cuda()
-    loss, psnr = calc_loss(pred_deps, batch_deps, batch_masks)
-    loss = loss * batch_imgs.shape[0] / len(episode)
-    test_psnr += psnr * batch_imgs.shape[0] / len(episode)
-    loss.backward()
+        mvsnet = copy.deepcopy(mvsnet_orig)
+        mvsnet.zero_grad()
+        for param in mvsnet.loss_net.parameters():
+            param.requires_grad = False
+        episode.eval()
+        mvsnet.eval()
 
-    grad_updated_param = []
-    for param in mvsnet.mvsnet.parameters():
-        grad = param.grad
-        if grad is not None:
-            grad = grad.detach().clone()
-        grad_updated_param.append(grad)
-    
-    del mvsnet
-    mvsnet = copy.deepcopy(mvsnet_orig)
-    mvsnet.zero_grad()
-    episode.train()
-    mvsnet.eval()
+        test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
+        test_psnr = 0
+        (batch_cams, batch_imgs, batch_masks, batch_deps) = next(iter(test_loader))
+        pred_deps = mvsnet(batch_imgs, batch_cams)
+        batch_masks = batch_masks[:, 0].cuda()
+        batch_deps = batch_deps[:, 0].cuda()
+        loss, psnr = calc_loss(pred_deps, batch_deps, batch_masks)
+        loss = loss * batch_imgs.shape[0] / len(episode)
+        test_psnr += psnr * batch_imgs.shape[0] / len(episode)
+        loss.backward()
 
-    grad_passing_raw = grad_updated_param
-    train_loader = episode.loader(batch_size=max(1, batch_size // 2), shuffle=True, pin_memory=True)
-
-    mvsnet.zero_grad()
-    (batch_cams, batch_imgs, _, _) = next(iter(train_loader))
-    loss = mvsnet(batch_imgs, batch_cams, training=True)
-    update_raw = torch.autograd.grad(
-        loss, mvsnet.mvsnet.parameters(), create_graph=True, allow_unused=True)
+        grad_updated_param = []
+        for param in mvsnet.mvsnet.parameters():
+            grad = param.grad
+            if grad is not None:
+                grad = grad.detach().clone()
+            grad_updated_param.append(grad)
         
-    count = 0
-    loss = 0
-    for ug, pg in zip(update_raw, grad_passing_raw):
-        if ug is not None and pg is not None:
-            loss = loss + (ug - pg).pow(2).sum()
-            count += ug.numel()
+        del mvsnet
+        mvsnet = copy.deepcopy(mvsnet_orig)
+        mvsnet.zero_grad()
+        episode.train()
+        mvsnet.eval()
 
-    loss = loss / count
-    grad_updated = torch.autograd.grad(
-        loss, mvsnet.loss_net.parameters(), allow_unused=True)
-    
-    for param, grad in zip(mvsnet_orig.loss_net.parameters(), grad_updated):
-        if grad is not None:
-            with torch.no_grad():
-                if param.grad is None:
-                    param.grad = grad.clone()
-                else:
-                    param.grad += grad
-    
+        grad_passing_raw = grad_updated_param
+        train_loader = episode.loader(batch_size=max(1, batch_size // 2), shuffle=True, pin_memory=True)
+
+        mvsnet.zero_grad()
+        (batch_cams, batch_imgs, _, _) = next(iter(train_loader))
+        loss = mvsnet(batch_imgs, batch_cams, training=True)
+        update_raw = torch.autograd.grad(
+            loss, mvsnet.mvsnet.parameters(), create_graph=True, allow_unused=True)
+            
+        count = 0
+        loss = 0
+        for ug, pg in zip(update_raw, grad_passing_raw):
+            if ug is not None and pg is not None:
+                loss = loss + (ug - pg).pow(2).sum()
+                count += ug.numel()
+
+        loss = loss / count
+        grad_updated = torch.autograd.grad(
+            loss, mvsnet.loss_net.parameters(), allow_unused=True)
+        
+        for param, grad in zip(mvsnet_orig.loss_net.parameters(), grad_updated):
+            if grad is not None:
+                with torch.no_grad():
+                    if param.grad is None:
+                        param.grad = grad.clone()
+                    else:
+                        param.grad += grad
 
     return mse2psnr(loss).item()
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002):
+def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=4, alpha=0.002):
     assert num_epoch == 1, "num_epoch must be 1"
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
