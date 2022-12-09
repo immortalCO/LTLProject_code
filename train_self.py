@@ -611,7 +611,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     for param in mvsnet.loss_net.parameters():
         param.requires_grad = False
 
-    opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
+    opt = torch.optim.Adam(mvsnet.mvsnet.parameters(), lr=alpha)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=5, gamma=0.5)
 
     episode.train()
