@@ -745,7 +745,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
 
     if init:
         epochs = epoch_fact
-        epoch_fact *= 100
+        epoch_fact *= 4
 
     mvsnet.eval()
     for epoch in range(1, epochs + 1):
