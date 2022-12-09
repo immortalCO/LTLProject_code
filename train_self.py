@@ -640,7 +640,6 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
             loss, psnr = calc_loss(pred_deps, batch_deps, batch_masks)
             loss = loss * batch_imgs.shape[0] / len(episode)
             test_psnr += psnr * batch_imgs.shape[0] / len(episode)
-            print(pred_deps.shape, batch_deps.shape, batch_masks.shape)
 
             if plot:
                 out = pred_deps[0]
