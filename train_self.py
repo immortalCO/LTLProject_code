@@ -481,7 +481,7 @@ class MVSNetSelfSup(nn.Module):
             Squeeze(1),
             nn.Conv2d(192, 24, 5, 2, 2),
             nn.ELU(),
-            nn.Conv2d(16, 4, 5, 2, 2),
+            nn.Conv2d(24, 4, 5, 2, 2),
         )
 
     def forward(self, *args, training=False):
