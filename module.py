@@ -21,18 +21,7 @@ Only works on 2D images and assumes
 #----------------------------------------------------------------------------
 
 def grid_sample_gradfix(input, grid):
-    if _should_use_custom_op():
-        return _GridSample2dForward.apply(input, grid)
-    return torch.nn.functional.grid_sample(input=input, grid=grid, mode='bilinear', padding_mode='zeros', align_corners=False)
-
-#----------------------------------------------------------------------------
-
-def _should_use_custom_op():
-    import warnings
-    if any(torch.__version__.startswith(x) for x in ['1.7.', '1.8.', '1.9']):
-        return True
-    warnings.warn(f'grid_sample_gradfix not supported on PyTorch {torch.__version__}. Falling back to torch.nn.functional.grid_sample().')
-    return False
+    return _GridSample2dForward.apply(input, grid)
 
 #----------------------------------------------------------------------------
 
