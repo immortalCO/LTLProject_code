@@ -1,3 +1,6 @@
+import warnings
+import torch
+
 # Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
@@ -10,13 +13,6 @@
 supports arbitrarily high order gradients between the input and output.
 Only works on 2D images and assumes
 `mode='bilinear'`, `padding_mode='zeros'`, `align_corners=False`."""
-
-import warnings
-import torch
-
-# pylint: disable=redefined-builtin
-# pylint: disable=arguments-differ
-# pylint: disable=protected-access
 
 #----------------------------------------------------------------------------
 
