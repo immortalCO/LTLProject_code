@@ -553,7 +553,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
         # 1st-order gradient update
         with torch.no_grad():
             if param.grad is None:
-                param.grad = grad
+                param.grad = grad.clone()
             else:
                 param.grad += grad
 
@@ -587,7 +587,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
                 if grad is not None:
                     with torch.no_grad():
                         if param.grad is None:
-                            param.grad = grad
+                            param.grad = grad.clone()
                         else:
                             param.grad += grad
     

@@ -514,7 +514,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     for param_orig, param in zip(mvsnet_orig.parameters(), mvsnet.parameters()):
         with torch.no_grad():
             if param_orig.grad is None:
-                param_orig.grad = param.grad
+                param_orig.grad = param.grad.clone()
             else:
                 param_orig.grad += param.grad
 
