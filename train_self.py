@@ -570,7 +570,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
 
     grad_passing_raw = [(grad * -alpha) if grad is not None else None for grad in grad_updated_param]
     del grad_updated_param
-
+    train_loader = episode.loader(batch_size=batch_size // 2, shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
         mvsnet.zero_grad()
         for (batch_cams, batch_imgs, _, _) in train_loader:
@@ -669,7 +669,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
 
     return test_psnr
 
-def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, batch_size=1, lr=0.002, epoch_fact=100):
+def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, batch_size=2, lr=0.002, epoch_fact=100):
     assert isinstance(mvsnet, MVSNetSelfSup), "Should be self-supervised MVSNet"
     epochs = epoch_fact * 10
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
@@ -679,7 +679,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, batch_size=1, lr=0.0
     best_valid_ckpt = None
 
     mvsnet.eval()
-    for epoch in range(1, epochs + 1):
+    for epoch in range(0, epochs + 1):
         if epoch > 0:
             epoch_psnr = 0
             opt.zero_grad()
