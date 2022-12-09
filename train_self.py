@@ -566,8 +566,10 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     mvsnet.eval()
     mvsnet.zero_grad()
 
+    grad_passing = []
     for grad in grad_updated_param:
-        grad *= -alpha
+        grad_passing.append(grad * -alpha)
+    del grad_updated_param
 
     for epoch in range(num_epoch):
         mvsnet.zero_grad()
@@ -579,7 +581,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
                 loss, mvsnet.parameters(), 
                 create_graph=True, retain_graph=False, allow_unused=True)
             grad_contribute = torch.autograd.grad(
-                update, mvsnet.parameters(), grad_updated_param, 
+                update, mvsnet.parameters(), grad_passing, 
                 create_graph=False, retain_graph=False, allow_unused=True)
 
             for param, grad in zip(mvsnet_orig.parameters(), grad_contribute):
