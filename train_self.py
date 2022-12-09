@@ -577,9 +577,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
-    for param in mvsnet.loss_net.parameters():
-        param.requires_grad = False
-    opt = torch.optim.Adam(mvsnet.mvsnet.parameters(), lr=alpha)
+    opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=5, gamma=0.5)
 
     episode = episode.sample_subset(batch_size * num_batches)
@@ -613,13 +611,13 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
         loss.backward()
 
     grad_updated_param = []
-    for param in mvsnet.mvsnet.parameters():
+    for param in mvsnet.parameters():
         grad = param.grad
         if grad is not None:
             grad = grad.detach().clone()
         grad_updated_param.append(grad)
 
-    for param, grad in zip(mvsnet_orig.mvsnet.parameters(), grad_updated_param):
+    for param, grad in zip(mvsnet_orig.parameters(), grad_updated_param):
         # 1st-order gradient update
         if grad is not None:
             with torch.no_grad():
@@ -647,7 +645,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
             loss = loss * batch_imgs.shape[0] / len(episode)
 
             update_raw = torch.autograd.grad(
-                loss, mvsnet.mvsnet.parameters(), create_graph=True, allow_unused=True)
+                loss, mvsnet.parameters(), create_graph=True, allow_unused=True)
                 
             update = []
             grad_passing = []
@@ -657,9 +655,9 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
                     grad_passing.append(pg)
             
             grad_contribute = torch.autograd.grad(
-                update, mvsnet.loss_net.parameters(), grad_passing, allow_unused=True)
+                update, mvsnet.parameters(), grad_passing, allow_unused=True)
 
-            for param, grad in zip(mvsnet_orig.loss_net.parameters(), grad_contribute):
+            for param, grad in zip(mvsnet_orig.parameters(), grad_contribute):
                 # 2nd-order gradient update
                 if grad is not None:
                     with torch.no_grad():
