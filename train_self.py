@@ -392,7 +392,7 @@ def read_train_data(SCENE, all_views=False, debug=False):
         dep[~mask] = 0.0
 
         dep_psnr += calc_loss(dep[..., 0], dep[..., 1], mask)[1]
-        dep_ssim += ssim(dep[..., 0].cpu.numpy(), dep[..., 1].cpu.numpy()).item()
+        dep_ssim += ssim(dep[..., 0], dep[..., 1]).item()
 
         all_data.append((proj, img, mask, dep))    
 
@@ -631,8 +631,8 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
                 ans = batch_deps[0]
                 ref = episode.batches[i][-1][0, ..., 0].cuda()
                 mask = batch_masks[0]
-                ssim_out = ssim(out.cpu().numpy(), ans.cpu().numpy())
-                ssim_ref = ssim(ref.cpu().numpy(), ans.cpu().numpy())
+                ssim_out = ssim(out, ans)
+                ssim_ref = ssim(ref, ans)
                 test_ssim += ssim_out / len(episode)
                 out[~mask] = 0
                 ans[~mask] = 0
