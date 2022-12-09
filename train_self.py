@@ -566,9 +566,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     mvsnet.eval()
     mvsnet.zero_grad()
 
-    grad_passing = []
-    for grad in grad_updated_param:
-        grad_passing.append(grad * -alpha)
+    grad_passing = [(grad * -alpha) for grad in grad_updated_param]
     del grad_updated_param
 
     for epoch in range(num_epoch):
