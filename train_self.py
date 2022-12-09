@@ -575,9 +575,11 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
             loss = mvsnet(batch_imgs, batch_cams, training=True)
             loss = loss * batch_imgs.shape[0] / len(episode)
 
-            update = torch.autograd.grad(
+            update_raw = torch.autograd.grad(
                 loss, mvsnet.parameters(), 
                 create_graph=True, retain_graph=False, allow_unused=True)
+            update = [g if g is not None else torch.zeros_like(p) for p, g in zip(mvsnet.parameters(), update_raw)]
+            
             grad_contribute = torch.autograd.grad(
                 update, mvsnet.parameters(), grad_passing, 
                 create_graph=False, retain_graph=False, allow_unused=True)
