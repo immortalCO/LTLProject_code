@@ -504,16 +504,12 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002, alpha2=None):
-    if alpha2 is None:
-        alpha2 = alpha
+def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002):
     assert num_epoch == 1, "num_epoch must be 1"
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
-    for param in mvsnet.loss_net.parameters():
-        param.requires_grad = False
-    opt = torch.optim.Adam(mvsnet.mvsnet.parameters(), lr=alpha)
+    opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=5, gamma=0.5)
 
     episode = episode.sample_subset(batch_size * num_batches)
@@ -547,13 +543,13 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
         loss.backward()
 
     grad_updated_param = []
-    for param in mvsnet.mvsnet.parameters():
+    for param in mvsnet.parameters():
         grad = param.grad
         if grad is not None:
             grad = grad.detach().clone()
         grad_updated_param.append(grad)
 
-    for param, grad in zip(mvsnet_orig.mvsnet.parameters(), grad_updated_param):
+    for param, grad in zip(mvsnet_orig.parameters(), grad_updated_param):
         # 1st-order gradient update
         if grad is not None:
             with torch.no_grad():
@@ -571,7 +567,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     mvsnet.eval()
     mvsnet.zero_grad()
 
-    grad_passing_raw = [(grad * -alpha2) if grad is not None else None for grad in grad_updated_param]
+    grad_passing_raw = [(grad * -alpha) if grad is not None else None for grad in grad_updated_param]
     del grad_updated_param
     train_loader = episode.loader(batch_size=max(1, batch_size // 2), shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
@@ -581,7 +577,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
             loss = loss * batch_imgs.shape[0] / len(episode)
 
             update_raw = torch.autograd.grad(
-                loss, mvsnet.mvsnet.parameters(), create_graph=True, allow_unused=True)
+                loss, mvsnet.parameters(), create_graph=True, allow_unused=True)
                 
             update = []
             grad_passing = []
@@ -591,9 +587,9 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
                     grad_passing.append(pg)
             
             grad_contribute = torch.autograd.grad(
-                update, mvsnet.loss_net.parameters(), grad_passing, allow_unused=True)
+                update, mvsnet.parameters(), grad_passing, allow_unused=True)
 
-            for param, grad in zip(mvsnet_orig.loss_net.parameters(), grad_contribute):
+            for param, grad in zip(mvsnet_orig.parameters(), grad_contribute):
                 # 2nd-order gradient update
                 if grad is not None:
                     with torch.no_grad():
@@ -613,7 +609,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     for param in mvsnet.loss_net.parameters():
         param.requires_grad = False
 
-    opt = torch.optim.Adam(mvsnet.mvsnet.parameters(), lr=alpha)
+    opt = torch.optim.Adam(mvsnet.parameters(), lr=alpha)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=5, gamma=0.5)
 
     episode.train()
@@ -673,7 +669,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     return test_psnr
 
 def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, 
-        batch_size=2, lr=0.001, alpha=0.002, alpha2=0.01, epoch_fact=100):
+        batch_size=2, lr=0.001, alpha=0.001, epoch_fact=100):
     assert isinstance(mvsnet, MVSNetSelfSup), "Should be self-supervised MVSNet"
     epochs = epoch_fact * 10
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
@@ -688,7 +684,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
             epoch_psnr = 0
             opt.zero_grad()
             for i, episode in enumerate(episodes):
-                psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha, alpha2=alpha2)
+                psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
                 epoch_psnr = epoch_psnr + psnr
             for param in mvsnet.parameters():
                 if param.grad is not None:
