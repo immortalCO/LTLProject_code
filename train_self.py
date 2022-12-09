@@ -554,8 +554,7 @@ def maml_init_train_step(mvsnet_orig, episode):
     loss = 0
     for ug, pg in zip(update_raw, grad_passing_raw):
         if ug is not None and pg is not None:
-            d = pg.norm().clamp(min=1e-12)
-            loss = loss + (ug/d - pg/d).pow(2).sum()
+            loss = loss + (ug - pg).pow(2).sum()
             count += ug.numel()
 
     loss = loss / count
