@@ -539,7 +539,7 @@ def maml_init_train_step(mvsnet_orig, episode):
     episode.train()
     mvsnet.eval()
 
-    grad_passing_raw = [-grad if grad is not None else None for grad in grad_updated_param]
+    grad_passing_raw = [grad if grad is not None else None for grad in grad_updated_param]
     del grad_updated_param
     train_loader = episode.loader(batch_size=max(1, batch_size // 2), shuffle=True, pin_memory=True)
 
