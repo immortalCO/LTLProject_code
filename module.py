@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torch
 import torch.nn.functional as F
 
-from . import grid_sample_gradfix
+import grid_sample_gradfix
 
 class ConvBnReLU(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, pad=1):
