@@ -97,6 +97,8 @@ class MVSNet(nn.Module):
         if self.refine:
             self.refine_network = RefineNet()
 
+        self.use_native_grid_sample = True
+
     def forward(self, imgs, proj_matrices, depth_values, features=None, prob_only=False):
 
         imgs = torch.unbind(imgs, 1)
@@ -117,7 +119,8 @@ class MVSNet(nn.Module):
         volume_sq_sum = 0
         for vid in range(num_views):
             # warpped features
-            warped_volume = homo_warping(features[vid], proj_matrices[:, vid], depth_values)
+            warped_volume = homo_warping(features[vid], proj_matrices[:, vid], depth_values, 
+                use_native_grid_sample=self.use_native_grid_sample)
             if self.training:
                 volume_sum = volume_sum + warped_volume
                 volume_sq_sum = volume_sq_sum + warped_volume ** 2
