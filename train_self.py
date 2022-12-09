@@ -504,7 +504,7 @@ def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
     
 
-def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002):
+def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=4, alpha=0.002):
     assert num_epoch == 1, "num_epoch must be 1"
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
@@ -684,7 +684,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
             epoch_psnr = 0
             opt.zero_grad()
             for i, episode in enumerate(episodes):
-                psnr = maml_train_step(mvsnet, episode, batch_size=max(1, batch_size//2), alpha=alpha)
+                psnr = maml_train_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
                 epoch_psnr = epoch_psnr + psnr
             for param in mvsnet.parameters():
                 if param.grad is not None:
