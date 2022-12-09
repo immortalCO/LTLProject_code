@@ -350,6 +350,7 @@ class MVSDataset(torch.utils.data.Dataset):
         return MVSDataset(random.sample(self.batches, n))
 
 def calc_loss(predict, target, mask, no_psnr=False):
+    assert predict.shape == target.shape
     se = (predict - target).pow(2) * mask
     se = se.sum(dim=(-1,-2)) / mask.sum(dim=(-1,-2)).clamp(min=1)
     loss = se.mean()
@@ -491,7 +492,7 @@ class MVSNetSelfSup(nn.Module):
             maml_loss = self.loss_net(features).mean(dim=(-1,-2)).norm(dim=-1).mean()
             return maml_loss
 
-        pred_deps = self.mvsnet(*args, prob_only=False)[0]
+        pred_deps = self.mvsnet(*args, prob_only=False)
         return pred_deps
 
 def fix_name(name):
