@@ -545,17 +545,18 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     grad_updated_param = []
     for param in mvsnet.parameters():
         grad = param.grad
-        if grad is None:
-            grad = torch.zeros_like(param)
-        grad_updated_param.append(grad.detach().clone())
+        if grad is not None:
+            grad = grad.detach().clone()
+        grad_updated_param.append(grad)
 
     for param, grad in zip(mvsnet_orig.parameters(), grad_updated_param):
         # 1st-order gradient update
-        with torch.no_grad():
-            if param.grad is None:
-                param.grad = grad.clone()
-            else:
-                param.grad += grad
+        if grad is not None:
+            with torch.no_grad():
+                if param.grad is None:
+                    param.grad = grad.clone()
+                else:
+                    param.grad += grad
 
     
     # 2nd run: obtain parameters with 2nd order gradient
@@ -566,7 +567,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     mvsnet.eval()
     mvsnet.zero_grad()
 
-    grad_passing = [(grad * -alpha) for grad in grad_updated_param]
+    grad_passing_raw = [(grad * -alpha) if grad is not None else None for grad in grad_updated_param]
     del grad_updated_param
 
     for epoch in range(num_epoch):
@@ -578,7 +579,13 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
             update_raw = torch.autograd.grad(
                 loss, mvsnet.parameters(), 
                 create_graph=True, retain_graph=False, allow_unused=True)
-            update = [g if g is not None else torch.zeros_like(p) for p, g in zip(mvsnet.parameters(), update_raw)]
+                
+            update = []
+            grad_passing = []
+            for ug, pg in zip(update_raw, grad_passing_raw):
+                if ug is not None and pg is not None:
+                    update.append(ug)
+                    grad_passing.append(pg)
             
             grad_contribute = torch.autograd.grad(
                 update, mvsnet.parameters(), grad_passing, 
