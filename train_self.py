@@ -557,10 +557,10 @@ def maml_init_train_step(mvsnet_orig, episode):
             count += ug.numel()
 
     loss = loss / count
-    mvsnet.zero_grad()
-    loss.backward()
+    grad = torch.autograd.grad(
+        loss, mvsnet.loss_net.parameters(), allow_unused=True)
     
-    for param_orig, param in zip(mvsnet_orig.loss_net.parameters(), mvsnet.loss_net.parameters()):
+    for param_orig, param in zip(mvsnet_orig.loss_net.parameters(), grad):
         with torch.no_grad():
             if param_orig.grad is None:
                 param_orig.grad = param.grad.clone()
