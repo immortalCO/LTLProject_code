@@ -502,6 +502,9 @@ def fix_name(name):
 
 def mse2psnr(x):
     return -10. * torch.log(x) / torch.log(torch.Tensor([10.]).to(x.device))
+
+def grad_normalize(x):
+    return x / x.norm().clamp(min=1e-12)
     
 
 def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002, alpha2=None):
@@ -571,7 +574,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     mvsnet.eval()
     mvsnet.zero_grad()
 
-    grad_passing_raw = [(grad * -alpha2) if grad is not None else None for grad in grad_updated_param]
+    grad_passing_raw = [(grad_normalize(grad) * -alpha2) if grad is not None else None for grad in grad_updated_param]
     del grad_updated_param
     train_loader = episode.loader(batch_size=max(1, batch_size // 2), shuffle=True, pin_memory=True)
     for epoch in range(num_epoch):
@@ -587,7 +590,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
             grad_passing = []
             for ug, pg in zip(update_raw, grad_passing_raw):
                 if ug is not None and pg is not None:
-                    update.append(ug)
+                    update.append(grad_normalize(ug))
                     grad_passing.append(pg)
             
             grad_contribute = torch.autograd.grad(
@@ -673,7 +676,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     return test_psnr
 
 def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, 
-        batch_size=2, lr=0.001, alpha=0.002, alpha2=0.01, epoch_fact=100):
+        batch_size=2, lr=0.002, alpha=0.002, alpha2=0.01, epoch_fact=100):
     assert isinstance(mvsnet, MVSNetSelfSup), "Should be self-supervised MVSNet"
     epochs = epoch_fact * 10
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
