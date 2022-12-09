@@ -789,5 +789,5 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
 
             logging.info(f"valid #{epoch} psnr = {valid_psnr:.8f} {updated}")
 
-    mvsnet.load_state_dict(best_valid_ckpt)
+    # mvsnet.load_state_dict(best_valid_ckpt)
     return mvsnet
