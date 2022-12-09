@@ -683,7 +683,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
     best_valid_ckpt = None
 
     mvsnet.eval()
-    for epoch in range(0, epochs + 1):
+    for epoch in range(1, epochs + 1):
         if epoch > 0:
             epoch_psnr = 0
             opt.zero_grad()
