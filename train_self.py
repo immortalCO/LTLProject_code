@@ -742,7 +742,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
         batch_size=2, lr=0.001, alpha=0.001, epoch_fact=100, init=False):
     assert isinstance(mvsnet, MVSNetSelfSup), "Should be self-supervised MVSNet"
     epochs = epoch_fact * 5
-    valid_epochs = ((epoch_fact // 4) if not init else epoch_fact)
+    valid_epochs = ((epoch_fact // 4) if not init else epochs)
     logging.info(f"maml train epochs = {epochs} valid_epochs = {valid_epochs}")
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.StepLR(opt, step_size=epoch_fact, gamma=0.75)
