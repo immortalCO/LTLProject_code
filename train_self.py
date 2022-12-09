@@ -508,13 +508,15 @@ def maml_init_train_step(mvsnet_orig, episode):
     num_epoch = batch_size = num_batches = 1
     assert num_epoch == 1, "num_epoch must be 1"
     import copy
-    mvsnet = copy.deepcopy(mvsnet_orig)
-    mvsnet.zero_grad()
-
     episode = episode.sample_subset(batch_size * num_batches)
 
+    mvsnet = copy.deepcopy(mvsnet_orig)
+    mvsnet.zero_grad()
+    for param in mvsnet.mvsnet.parameters():
+        param.requires_grad = False
     episode.eval()
     mvsnet.eval()
+
     test_loader = episode.loader(batch_size=batch_size, shuffle=True, pin_memory=True)
     test_psnr = 0
     (batch_cams, batch_imgs, batch_masks, batch_deps) = next(iter(test_loader))
@@ -527,7 +529,7 @@ def maml_init_train_step(mvsnet_orig, episode):
     loss.backward()
 
     grad_updated_param = []
-    for param in mvsnet.parameters():
+    for param in mvsnet.loss_net.parameters():
         grad = param.grad
         if grad is not None:
             grad = grad.detach().clone()
@@ -535,6 +537,9 @@ def maml_init_train_step(mvsnet_orig, episode):
     
     del mvsnet
     mvsnet = copy.deepcopy(mvsnet_orig)
+    mvsnet.zero_grad()
+    for param in mvsnet.mvsnet.parameters():
+        param.requires_grad = False
     episode.train()
     mvsnet.eval()
 
@@ -546,7 +551,7 @@ def maml_init_train_step(mvsnet_orig, episode):
     (batch_cams, batch_imgs, _, _) = next(iter(train_loader))
     loss = mvsnet(batch_imgs, batch_cams, training=True)
     update_raw = torch.autograd.grad(
-        loss, mvsnet.parameters(), create_graph=True, allow_unused=True)
+        loss, mvsnet.loss_net.parameters(), create_graph=True, allow_unused=True)
         
     count = 0
     loss = 0
@@ -559,7 +564,7 @@ def maml_init_train_step(mvsnet_orig, episode):
     mvsnet.zero_grad()
     loss.backward()
     
-    for param_orig, param in zip(mvsnet_orig.parameters(), mvsnet.parameters()):
+    for param_orig, param in zip(mvsnet_orig.loss_net.parameters(), mvsnet.loss_net.parameters()):
         with torch.no_grad():
             if param_orig.grad is None:
                 param_orig.grad = param.grad.clone()
