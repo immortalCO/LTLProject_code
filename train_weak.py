@@ -561,12 +561,12 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
                 ans = batch_deps[0]
                 ref = episode.batches[i][-1][0, ..., 0].cuda()
                 mask = batch_masks[0]
-                ssim_out = ssim(out, ans)
-                ssim_ref = ssim(ref, ans)
-                test_ssim += ssim_out / len(episode)
                 out[~mask] = 0
                 ans[~mask] = 0
                 ref[~mask] = 0
+                ssim_out = ssim(out, ans)
+                ssim_ref = ssim(ref, ans)
+                test_ssim += ssim_out / len(episode)
                 logging.debug("====================================")
                 logging.debug(f"#{i}")
                 logging.debug("out:")
