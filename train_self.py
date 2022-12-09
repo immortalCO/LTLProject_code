@@ -477,10 +477,9 @@ class MVSNetSelfSup(nn.Module):
         self.mvsnet.mvsnet.use_native_grid_sample = False
         self.loss_net = nn.Sequential(
             nn.Conv3d(8, 1, 3, stride=1, padding=1),
-            Squeeze(1),
-            nn.Conv2d(192, 48, 5, 2, 2),
             nn.ELU(),
-            nn.Conv2d(48, 16, 5, 2, 2),
+            Squeeze(1),
+            nn.Conv2d(192, 24, 5, 2, 2),
             nn.ELU(),
             nn.Conv2d(16, 4, 5, 2, 2),
         )
