@@ -547,7 +547,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
         grad = param.grad
         if grad is None:
             grad = torch.zeros_like(param)
-        grad_updated_param.append(grad)
+        grad_updated_param.append(grad.detach().clone())
 
     for param, grad in zip(mvsnet_orig.parameters(), grad_updated_param):
         # 1st-order gradient update
@@ -556,6 +556,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
                 param.grad = grad
             else:
                 param.grad += grad
+
     
     # 2nd run: obtain parameters with 2nd order gradient
     mvsnet.zero_grad()
@@ -564,13 +565,17 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     episode.train()
     mvsnet.eval()
     mvsnet.zero_grad()
+
+    for grad in grad_updated_param:
+        grad *= -alpha
+
     for epoch in range(num_epoch):
         mvsnet.zero_grad()
         for (batch_cams, batch_imgs, _, _) in train_loader:
             loss = mvsnet(batch_imgs, batch_cams, training=True)
             loss = loss * batch_imgs.shape[0] / len(episode)
 
-            update = -alpha * torch.autograd.grad(
+            update = torch.autograd.grad(
                 loss, mvsnet.parameters(), 
                 create_graph=True, retain_graph=False, allow_unused=True)
             grad_contribute = torch.autograd.grad(
