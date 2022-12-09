@@ -509,6 +509,8 @@ def maml_init_train_step(mvsnet_orig, episode, num_iter=4):
     assert num_epoch == 1, "num_epoch must be 1"
     import copy
 
+    test_psnr = 0
+
     for iter in num_iter:
         episode = episode.sample_subset(batch_size * num_batches)
 
@@ -571,7 +573,9 @@ def maml_init_train_step(mvsnet_orig, episode, num_iter=4):
                     else:
                         param.grad += grad
 
-    return mse2psnr(loss).item()
+        test_psnr += mse2psnr(loss).item() / num_iter
+        
+    return test_psnr
 
 def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches=8, alpha=0.002):
     assert num_epoch == 1, "num_epoch must be 1"
