@@ -739,9 +739,10 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     return test_psnr
 
 def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, 
-        batch_size=2, lr=0.001, alpha=0.001, epoch_fact=100, init=False):
+        batch_size=2, lr=0.001, alpha=0.001, epoch_fact=100, epochs=None, init=False):
     assert isinstance(mvsnet, MVSNetSelfSup), "Should be self-supervised MVSNet"
-    epochs = epoch_fact * 5
+    if epochs is None:
+        epochs = epoch_fact * 5
     valid_epochs = ((epoch_fact // 4) if not init else epochs)
     logging.info(f"maml train epochs = {epochs} valid_epochs = {valid_epochs}")
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
