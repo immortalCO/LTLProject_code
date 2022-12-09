@@ -543,14 +543,11 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
         loss.backward()
 
     grad_updated_param = []
-    grad_passing_raw = []
-    for name, param in mvsnet.named_parameters():
+    for param in mvsnet.parameters():
         grad = param.grad
         if grad is not None:
             grad = grad.detach().clone()
         grad_updated_param.append(grad)
-        if name.startswith("loss_net"):
-            grad_passing_raw.append(grad)
 
     for param, grad in zip(mvsnet_orig.parameters(), grad_updated_param):
         # 1st-order gradient update
@@ -562,7 +559,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
                     param.grad += grad
 
     
-    # 2nd run: obtain parameters with 2nd order gradient
+    # 2nd run: obtain parameters with 2nd order gradient (only for loss_net)
     mvsnet.zero_grad()
     del mvsnet
     mvsnet = copy.deepcopy(mvsnet_orig)
@@ -570,21 +567,19 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
     mvsnet.eval()
     mvsnet.zero_grad()
 
+    grad_passing_raw = [(grad * -alpha) if grad is not None else None for grad in grad_updated_param]
+    del grad_updated_param
+
     for epoch in range(num_epoch):
         mvsnet.zero_grad()
         for (batch_cams, batch_imgs, _, _) in train_loader:
             loss = mvsnet(batch_imgs, batch_cams, training=True)
             loss = loss * batch_imgs.shape[0] / len(episode)
 
-            loss_net_params = []
-            for name, param in mvsnet.named_parameters():
-                if name.startswith("loss_net"):
-                    loss_net_params.append(param)
-
             update_raw = torch.autograd.grad(
-                loss, loss_net_params, 
+                loss, mvsnet.parameters(), 
                 create_graph=True, retain_graph=False, allow_unused=True)
-
+                
             update = []
             grad_passing = []
             for ug, pg in zip(update_raw, grad_passing_raw):
@@ -593,7 +588,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
                     grad_passing.append(pg)
             
             grad_contribute = torch.autograd.grad(
-                update, loss_net_params, grad_passing, 
+                update, mvsnet.loss_net.parameters(), grad_passing, 
                 create_graph=False, retain_graph=False, allow_unused=True)
 
             for param, grad in zip(mvsnet_orig.loss_net.parameters(), grad_contribute):
