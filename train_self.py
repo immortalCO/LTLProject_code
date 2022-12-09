@@ -512,8 +512,6 @@ def maml_init_train_step(mvsnet_orig, episode):
 
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
-    for param in mvsnet.mvsnet.parameters():
-        param.requires_grad = False
     episode.eval()
     mvsnet.eval()
 
@@ -529,7 +527,7 @@ def maml_init_train_step(mvsnet_orig, episode):
     loss.backward()
 
     grad_updated_param = []
-    for param in mvsnet.loss_net.parameters():
+    for param in mvsnet.mvsnet.parameters():
         grad = param.grad
         if grad is not None:
             grad = grad.detach().clone()
@@ -538,8 +536,6 @@ def maml_init_train_step(mvsnet_orig, episode):
     del mvsnet
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
-    for param in mvsnet.mvsnet.parameters():
-        param.requires_grad = False
     episode.train()
     mvsnet.eval()
 
@@ -551,7 +547,7 @@ def maml_init_train_step(mvsnet_orig, episode):
     (batch_cams, batch_imgs, _, _) = next(iter(train_loader))
     loss = mvsnet(batch_imgs, batch_cams, training=True)
     update_raw = torch.autograd.grad(
-        loss, mvsnet.loss_net.parameters(), create_graph=True, allow_unused=True)
+        loss, mvsnet.mvsnet.parameters(), create_graph=True, allow_unused=True)
         
     count = 0
     loss = 0
