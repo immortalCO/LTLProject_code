@@ -474,6 +474,7 @@ class MVSNetSelfSup(nn.Module):
     def __init__(self, ckpt):
         super().__init__()
         self.mvsnet = MVSNetPretrained(ckpt)
+        self.mvsnet.mvsnet.use_native_grid_sample = False
         self.loss_net = nn.Sequential(
             nn.Conv3d(8, 1, 3, stride=1, padding=1),
             Squeeze(1),
