@@ -591,9 +591,9 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
                     grad_passing.append(pg)
             
             grad_contribute = torch.autograd.grad(
-                update, mvsnet.parameters(), grad_passing, allow_unused=True)
+                update, mvsnet.loss_net.parameters(), grad_passing, allow_unused=True)
 
-            for param, grad in zip(mvsnet_orig.parameters(), grad_contribute):
+            for param, grad in zip(mvsnet_orig.loss_net.parameters(), grad_contribute):
                 # 2nd-order gradient update
                 if grad is not None:
                     with torch.no_grad():
@@ -673,7 +673,7 @@ def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.00
     return test_psnr
 
 def maml_train(mvsnet, episodes, valid_episodes, save_ckpt, 
-        batch_size=2, lr=0.002, alpha=0.002, epoch_fact=100):
+        batch_size=2, lr=0.001, alpha=0.001, epoch_fact=100):
     assert isinstance(mvsnet, MVSNetSelfSup), "Should be self-supervised MVSNet"
     epochs = epoch_fact * 10
     opt = torch.optim.Adam(mvsnet.parameters(), lr=lr)
