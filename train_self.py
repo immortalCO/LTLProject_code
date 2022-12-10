@@ -605,7 +605,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.002, plot=False):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=30, batch_size=2, alpha=0.002, plot=False):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
@@ -683,7 +683,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
     best_valid_ckpt = None
 
     mvsnet.eval()
-    for epoch in range(1, epochs + 1):
+    for epoch in range(0, epochs + 1):
         if epoch > 0:
             epoch_psnr = 0
             opt.zero_grad()
@@ -698,10 +698,10 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
             epoch_psnr /= len(episodes)            
             logging.info(f"#{epoch} psnr = {epoch_psnr:.8f}")
 
-        if epoch % (epoch_fact // 4) == 0:
+        if epoch % (epoch_fact // 5) == 0:
             valid_psnr = 0
             for i, episode in enumerate(valid_episodes):
-                psnr = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha)
+                psnr = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha//2)
                 valid_psnr = valid_psnr + psnr
                 logging.info(f"valid #{epoch} episode #{i} psnr = {psnr:.6f}")
             valid_psnr /= len(valid_episodes)
