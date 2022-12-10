@@ -701,7 +701,7 @@ def maml_train(mvsnet, episodes, valid_episodes, save_ckpt,
         if epoch % (epoch_fact // 5) == 0:
             valid_psnr = 0
             for i, episode in enumerate(valid_episodes):
-                psnr = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha//2)
+                psnr = maml_valid_step(mvsnet, episode, batch_size=batch_size, alpha=alpha/2)
                 valid_psnr = valid_psnr + psnr
                 logging.info(f"valid #{epoch} episode #{i} psnr = {psnr:.6f}")
             valid_psnr /= len(valid_episodes)
