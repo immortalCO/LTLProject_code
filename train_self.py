@@ -480,11 +480,9 @@ class MVSNetSelfSup(nn.Module):
             nn.Conv3d(8, 1, 3, stride=1, padding=1),
             nn.ELU(),
             Squeeze(1),
-            nn.Conv2d(192, 48, 5, 2, 2),
+            nn.Conv2d(192, 24, 5, 2, 2),
             nn.ELU(),
-            nn.Conv2d(48, 12, 5, 2, 2),
-            nn.ELU(),
-            nn.Conv2d(12, 3, 5, 2, 2),
+            nn.Conv2d(24, 4, 5, 2, 2),
         )
 
     def forward(self, *args, training=False):
@@ -625,7 +623,7 @@ def maml_train_m_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batch
 
     return test_psnr
 
-def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.002, plot=False):
+def maml_valid_step(mvsnet_orig, episode, num_epoch=40, batch_size=2, alpha=0.001/2, plot=False):
     import copy
     mvsnet = copy.deepcopy(mvsnet_orig)
     mvsnet.zero_grad()
