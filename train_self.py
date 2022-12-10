@@ -586,7 +586,7 @@ def maml_train_step(mvsnet_orig, episode, num_epoch=1, batch_size=2, num_batches
             update = []
             grad_passing = []
             for ug, pg in zip(update_raw, grad_passing_raw):
-                if ug is not None and pg is not None:
+                if ug is not None and pg is not None and ug.requires_grad:
                     update.append(ug)
                     grad_passing.append(pg)
             
